@@ -29,38 +29,77 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 1) Пересоздаём android-папку с правильным именем проекта
+      # 1) Пересоздаём android-папку с правильным именем проекта (устраняем v1 embedding)
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
-      # 2) Фиксим Kotlin ПОСЛЕ регенерации через три универсальных sed от DeepSeek
-      - name: Fix Kotlin version
+      # 2) ПОЛНАЯ ПЕРЕЗАПИСЬ gradle-файлов — версии Kotlin 1.9.20 и AGP 8.3.2 жёстко зашиты
+      - name: Overwrite gradle files (Kotlin 1.9.20 + AGP 8.3.2)
         run: |
-          echo "=== build.gradle BEFORE ==="
-          cat android/build.gradle || true
+          # --- Удаляем все файлы конфигурации, чтобы не было конфликтов синтаксиса ---
+          rm -f android/settings.gradle
+          rm -f android/settings.gradle.kts
+          rm -f android/build.gradle
+          rm -f android/build.gradle.kts
           
-          # Groovy: id "org.jetbrains.kotlin.android" version "X.X.X" apply false
-          sed -i -E 's/(id[[:space:]]+["'"'"']org\.jetbrains\.kotlin\.android["'"'"'][[:space:]]+version[[:space:]]+["'"'"'])[^"'"'"']+(["'"'"'])/\11.9.20\2/g' android/build.gradle
+          # --- Создаем чистый settings.gradle с нужными версиями плагинов ---
+          cat > android/settings.gradle << 'EOF'
+          pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream { properties.load(it) }
+                  def flutterSdkPath = properties.getProperty("flutter.sdk")
+                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  return flutterSdkPath
+              }()
+              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          plugins {
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+              id "com.android.application" version "8.3.2" apply false
+              id "org.jetbrains.kotlin.android" version "1.9.20" apply false
+          }
+          include ":app"
+          EOF
           
-          # Kotlin DSL: id("org.jetbrains.kotlin.android") version "X.X.X"
-          sed -i -E 's/(id\("org\.jetbrains\.kotlin\.android"\)[[:space:]]+version[[:space:]]+")[^"]+(")/\11.9.20\2/g' android/settings.gradle.kts || true
+          # --- Создаем чистый корневой build.gradle ---
+          cat > android/build.gradle << 'EOF'
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.buildDir = "../build"
+          subprojects {
+              project.buildDir = "${rootProject.buildDir}/${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(":app")
+          }
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
           
-          # Legacy: ext.kotlin_version = 'X.X.X'
-          sed -i -E "s/(ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.20\2/g" android/build.gradle || true
-          
-          # Поднимаем AGP до стабильного уровня, совместимого с фоновым сервисом
-          sed -i -E 's/(com\.android\.application["'"'"']?\)?[[:space:]]+version[[:space:]]+["'"'"'])[^"'"'"']+(["'"'"'])/\18.3.2\2/g' android/settings.gradle.kts || true
-          sed -i -E "s/(com\.android\.tools\.build:gradle:)[0-9.]+/\18.3.2/g" android/build.gradle || true
-          
-          echo "=== build.gradle AFTER ==="
-          cat android/build.gradle || true
+          # --- Отладочный вывод для логов GitHub Actions ---
+          echo "===== android/settings.gradle ====="
+          cat android/settings.gradle
+          echo "===== android/build.gradle ====="
+          cat android/build.gradle
 
       # 3) Сборка APK
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
+      # 4) Выкладываем готовые файлы
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
