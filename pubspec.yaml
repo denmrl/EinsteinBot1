@@ -20,7 +20,7 @@ dependencies:
   path_provider: ^2.1.3
   
   # Сетевой слой и логирование
-  dio: ^5.5.0.2
+  dio: ^5.5.0
   crypto: ^3.0.3
   logger: ^2.3.0
   
