@@ -29,26 +29,35 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 1. Сначала генерируем чистую современную папку Android
+      # 1) Пересоздаём android-папку с правильным именем проекта
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
-      # 2. Мгновенно инжектируем стабильную версию Kotlin 1.9.20 в оба варианта синтаксиса Gradle
-      - name: Inject stable Kotlin version for background service
+      # 2) Фиксим Kotlin ПОСЛЕ регенерации через три универсальных sed от DeepSeek
+      - name: Fix Kotlin version
         run: |
-          # Фикс для современного синтаксиса settings.gradle.kts (Kotlin DSL)
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "1.9.20"/g' android/settings.gradle.kts
-          fi
+          echo "=== build.gradle BEFORE ==="
+          cat android/build.gradle || true
           
-          # Фикс на случай генерации старого синтаксиса build.gradle (Groovy)
-          if [ -f android/build.gradle ]; then
-            sed -i "s/ext.kotlin_version = '.*/ext.kotlin_version = '1.9.20'/g" android/build.gradle
-          fi
+          # Groovy: id "org.jetbrains.kotlin.android" version "X.X.X" apply false
+          sed -i -E 's/(id[[:space:]]+["'"'"']org\.jetbrains\.kotlin\.android["'"'"'][[:space:]]+version[[:space:]]+["'"'"'])[^"'"'"']+(["'"'"'])/\11.9.20\2/g' android/build.gradle
+          
+          # Kotlin DSL: id("org.jetbrains.kotlin.android") version "X.X.X"
+          sed -i -E 's/(id\("org\.jetbrains\.kotlin\.android"\)[[:space:]]+version[[:space:]]+")[^"]+(")/\11.9.20\2/g' android/settings.gradle.kts || true
+          
+          # Legacy: ext.kotlin_version = 'X.X.X'
+          sed -i -E "s/(ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.20\2/g" android/build.gradle || true
+          
+          # Поднимаем AGP до стабильного уровня, совместимого с фоновым сервисом
+          sed -i -E 's/(com\.android\.application["'"'"']?\)?[[:space:]]+version[[:space:]]+["'"'"'])[^"'"'"']+(["'"'"'])/\18.3.2\2/g' android/settings.gradle.kts || true
+          sed -i -E "s/(com\.android\.tools\.build:gradle:)[0-9.]+/\18.3.2/g" android/build.gradle || true
+          
+          echo "=== build.gradle AFTER ==="
+          cat android/build.gradle || true
 
-      # 3. Запускаем компиляцию релиза
+      # 3) Сборка APK
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
