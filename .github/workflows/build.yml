@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # ☁️ ВАРИАНТ 2 ОТ DEEPSEEK: Сносим старый битый шаблон android и генерируем чистый v2 embedding
+      - name: Regenerate Android folder (fix v1 embedding)
+        run: |
+          rm -rf android
+          flutter create . --platforms=android
+
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
