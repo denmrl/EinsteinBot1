@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 1) Пересоздаём android-папку с правильным именем проекта (устраняем v1 embedding)
+      # 1) Пересоздаём android-папку с правильным именем проекта
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
@@ -38,13 +38,11 @@ jobs:
       # 2) ПОЛНАЯ ПЕРЕЗАПИСЬ gradle-файлов — версии Kotlin 1.9.20 и AGP 8.3.2 жёстко зашиты
       - name: Overwrite gradle files (Kotlin 1.9.20 + AGP 8.3.2)
         run: |
-          # --- Удаляем все файлы конфигурации, чтобы не было конфликтов синтаксиса ---
           rm -f android/settings.gradle
           rm -f android/settings.gradle.kts
           rm -f android/build.gradle
           rm -f android/build.gradle.kts
           
-          # --- Создаем чистый settings.gradle с нужными версиями плагинов ---
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
@@ -69,7 +67,6 @@ jobs:
           include ":app"
           EOF
           
-          # --- Создаем чистый корневой build.gradle ---
           cat > android/build.gradle << 'EOF'
           allprojects {
               repositories {
@@ -88,18 +85,24 @@ jobs:
               delete rootProject.buildDir
           }
           EOF
-          
-          # --- Отладочный вывод для логов GitHub Actions ---
-          echo "===== android/settings.gradle ====="
-          cat android/settings.gradle
-          echo "===== android/build.gradle ====="
-          cat android/build.gradle
 
-      # 3) Сборка APK
+      # 3) 🚀 ФИНАЛЬНЫЙ ШТРИХ: Обновляем версию Gradle с 7.6.3 до 8.4 в сгенерированной папке
+      - name: Upgrade Gradle Wrapper distribution version to 8.4
+        run: |
+          echo "=== gradle-wrapper.properties BEFORE ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+          
+          # Меняем старый zip архив на версию 8.4-all.zip, как просил компилятор
+          sed -i 's/gradle-7.6.3-all.zip/gradle-8.4-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
+          
+          echo "=== gradle-wrapper.properties AFTER ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+
+      # 4) Сборка APK
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
-      # 4) Выкладываем готовые файлы
+      # 5) Выкладываем готовые файлы
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
