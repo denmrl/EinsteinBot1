@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ==========================================================
+   ЭЙНШТЕЙН — AndroidManifest для Android 15 (API 35)
+   Путь: einstein_app/android/app/src/main/AndroidManifest.xml
+  ==========================================================
+-->
+<manifest xmlns:android="http://android.com"
+    xmlns:tools="http://android.com">
+
+    <!-- ============================================================ -->
+    <!-- РАЗРЕШЕНИЯ                                                    -->
+    <!-- ============================================================ -->
+
+    <!-- Сеть для Bybit API, курса USD/RUB, получения свечей -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Показ уведомлений (Android 13+ требует явного разрешения в рантайме) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Foreground Service: основной тип для долгоживущих сетевых/вычислительных задач -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14+ требует ОБЯЗАТЕЛЬНО указывать тип сервиса -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Не давать системе засыпать телефон во время торговой сессии -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Автозапуск бота после перезагрузки телефона (опционально) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Запрос отключения оптимизации батареи (важно для Honor MagicOS 9!) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Plan точных задач (для отчёта в 22:00 МСК) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <application
+        android:label="Эйнштейн"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="false"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        tools:replace="android:allowBackup">
+
+        <!-- ============================================================ -->
+        <!-- ГЛАВНАЯ ACTIVITY (точка входа UI)                            -->
+        <!-- ============================================================ -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:showWhenLocked="true"
+            android:turnScreenOn="false">
+
+            <!-- Стандартный intent-filter для запуска приложения -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- ============================================================ -->
+        <!-- FOREGROUND SERVICE (flutter_foreground_task)                 -->
+        <!-- Именно этот сервис держит бота живым в фоне Android 15       -->
+        <!-- ============================================================ -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+            android:stopWithTask="false" />
+
+        <!-- ============================================================ -->
+        <!-- ПРИЁМНИКИ УВЕДОМЛЕНИЙ (flutter_local_notifications)          -->
+        <!-- ============================================================ -->
+
+        <!-- Нажатие на пуш, когда приложение свёрнуто -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+
+        <!-- Действия на пуше (кнопки «Открыть», «Закрыть» и т.д.) -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false" />
+
+        <!-- Восстановление уведомлений после перезагрузки устройства -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- ============================================================ -->
+        <!-- ПРИЛОЖЕНИЯ FLUTTER (генерируются автоматически, не удаляй!)     -->
+        <!-- ============================================================ -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!-- ============================================================ -->
+    <!-- QUERIES для url_launcher (открытие ссылок на Bybit)          -->
+    <!-- ============================================================ -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+</manifest>
