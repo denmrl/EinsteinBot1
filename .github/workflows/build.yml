@@ -29,11 +29,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # ☁️ ВАРИАНТ 2 ОТ DEEPSEEK: Сносим старый битый шаблон android и генерируем чистый v2 embedding
+      # ☁️ Исправление имени проекта: принудительно задаем правильное имя пакета маленькими буквами
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
-          flutter create . --platforms=android
+          flutter create . --platforms=android --project-name=einstein_app
 
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
