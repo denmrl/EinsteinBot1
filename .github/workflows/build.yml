@@ -26,22 +26,8 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 🛠️ ЛАЙФХАК: Создаем пустые заглушки для иконок прямо в облаке, чтобы сборка не падала
-      - name: Create asset directories and dummy icons
-        run: |
-          mkdir -p assets/icons
-          convert -size 1024x1024 xc:#0E1116 assets/icons/app_icon.png
-          convert -size 1024x1024 xc:#0E1116 assets/icons/app_icon_foreground.png
-          convert -size 512x512 xc:#0E1116 assets/icons/splash.png
-
       - name: Install dependencies
         run: flutter pub get
-
-      # Генерируем нативные иконки и сплеш-экран из созданных заглушек
-      - name: Generate launcher icons and native splash
-        run: |
-          dart run flutter_launcher_icons
-          dart run flutter_native_splash:create
 
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
