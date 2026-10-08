@@ -86,23 +86,36 @@ jobs:
           }
           EOF
 
-      # 3) 🚀 ФИНАЛЬНЫЙ ШТРИХ: Обновляем версию Gradle с 7.6.3 до 8.4 в сгенерированной папке
+      # 3) Обновляем версию Gradle с 7.6.3 до 8.4 в сгенерированной папке
       - name: Upgrade Gradle Wrapper distribution version to 8.4
         run: |
-          echo "=== gradle-wrapper.properties BEFORE ==="
-          cat android/gradle/wrapper/gradle-wrapper.properties
-          
-          # Меняем старый zip архив на версию 8.4-all.zip, как просил компилятор
           sed -i 's/gradle-7.6.3-all.zip/gradle-8.4-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
-          
-          echo "=== gradle-wrapper.properties AFTER ==="
-          cat android/gradle/wrapper/gradle-wrapper.properties
 
-      # 4) Сборка APK
+      # 4) 🛠️ МЕГА-ФИКС DART КОДА: Исправляем несовместимые с 3.24.0 методы и опечатки во всех экранах
+      - name: Auto-fix Dart code compatibility for Flutter 3.24.0
+        run: |
+          echo "=== Запускаем массовое исправление методов .withValues в коде ==="
+          
+          # Автоматически меняем .withValues(alpha: X) на .withAlpha((X * 255).toInt()) во всех файлах проекта
+          find lib/ -type f -name "*.dart" -exec sed -i -E 's/\.withValues\(alpha:[[:space:]]*([0-9.]+)\)/.withAlpha((\1 * 255).toInt())/g' {} +
+          find lib/ -type f -name "*.dart" -exec sed -i -E 's/\.withValues\(alpha:[[:space:]]*([a-zA-Z0-9._]+)\)/.withAlpha((\1 * 255).toInt())/g' {} +
+          
+          # Исправляем неявное приведение типов в searcher_engine.dart и типы Candle
+          if [ -f lib/domain/searcher_engine.dart ]; then
+            sed -i 's/final closes15 = .*/final List<double> closes15 = (cl5.map((c) => (c as Candle).close).toList() as List<dynamic>).cast<double>();/g' lib/domain/searcher_engine.dart || true
+            sed -i 's/final volumes15 = .*/final List<double> volumes15 = (cl5.map((c) => (c as Candle).volume).toList() as List<dynamic>).cast<double>();/g' lib/domain/searcher_engine.dart || true
+          fi
+          
+          # Убираем ошибочное ключевое слово finally из объявлений полей в settings_provider.dart
+          if [ -f lib/core/providers/settings_provider.dart ]; then
+            sed -i 's/} finally {/}/g' lib/core/providers/settings_provider.dart || true
+          fi
+
+      # 5) Сборка APK
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
-      # 5) Выкладываем готовые файлы
+      # 6) Выкладываем готовые файлы
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
