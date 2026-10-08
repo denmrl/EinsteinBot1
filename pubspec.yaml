@@ -1,41 +1,77 @@
 name: einstein_app
-description: "Торговый терминал Эйнштейн для Bybit V5"
+description: "Эйнштейн — торговый и аналитический терминал для Bybit (Paper + Real)."
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.24.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  
-  # Управление состоянием (Мосты UI)
-  provider: ^6.1.2
-  
-  # Локальная база данных (Совместимая пара по версии Гитхаба)
-  hive_ce: ^2.20.2
-  hive_ce_flutter: ^2.3.4
-  path_provider: ^2.1.3
-  
-  # Сетевой слой и логирование
-  dio: ^5.5.0
-  crypto: ^3.0.3
-  logger: ^2.3.0
-  
-  # Системные утилиты, даты и фоновый режим
+
+  # ---------- UI / локализация ----------
+  cupertino_icons: ^1.0.8
   intl: ^0.19.0
-  timezone: ^0.9.4
+
+  # ---------- Управление состоянием ----------
+  provider: ^6.1.2
+
+  # ---------- Локальная база данных ----------
+  # ⚠️ ВАЖНО: версия 2.1.0 совместима с Flutter 3.24.0
+  # Ошибка возникала из-за требования hive_ce_flutter >=2.2.0 Flutter >=3.27.0
+  hive_ce: ^2.1.0
+  hive_ce_flutter: ^2.1.0
+  path_provider: ^2.1.4
+
+  # ---------- Безопасное хранение секретов ----------
   flutter_secure_storage: ^9.2.2
-  shared_preferences: ^2.2.3
-  flutter_local_notifications: ^17.2.1
-  flutter_foreground_task: ^6.3.2
+
+  # ---------- Лёгкие настройки ----------
+  shared_preferences: ^2.3.2
+
+  # ---------- Сеть ----------
+  dio: ^5.7.0
+  crypto: ^3.0.6
+
+  # ---------- Фоновый сервис ----------
+  flutter_foreground_task: ^8.17.0
+  flutter_local_notifications: ^17.2.4
+  permission_handler: ^11.3.1
+
+  # ---------- Графики ----------
+  fl_chart: ^0.69.0
+  candlesticks: ^2.1.0
+
+  # ---------- Утилиты ----------
+  timezone: ^0.9.4
+  logger: ^2.4.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.3
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  image_path: "assets/icons/app_icon.png"
+  adaptive_icon_background: "#0E1116"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+  min_sdk_android: 23
+
+flutter_native_splash:
+  color: "#0E1116"
+  image: assets/icons/splash.png
+  android_12:
+    image: assets/icons/splash.png
+    color: "#0E1116"
