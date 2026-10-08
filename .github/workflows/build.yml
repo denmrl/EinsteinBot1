@@ -29,12 +29,26 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # ☁️ Исправление имени проекта: принудительно задаем правильное имя пакета маленькими буквами
+      # 1. Сначала генерируем чистую современную папку Android
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
+      # 2. Мгновенно инжектируем стабильную версию Kotlin 1.9.20 в оба варианта синтаксиса Gradle
+      - name: Inject stable Kotlin version for background service
+        run: |
+          # Фикс для современного синтаксиса settings.gradle.kts (Kotlin DSL)
+          if [ -f android/settings.gradle.kts ]; then
+            sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "1.9.20"/g' android/settings.gradle.kts
+          fi
+          
+          # Фикс на случай генерации старого синтаксиса build.gradle (Groovy)
+          if [ -f android/build.gradle ]; then
+            sed -i "s/ext.kotlin_version = '.*/ext.kotlin_version = '1.9.20'/g" android/build.gradle
+          fi
+
+      # 3. Запускаем компиляцию релиза
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
