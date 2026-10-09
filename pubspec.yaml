@@ -1,5 +1,5 @@
 name: einstein_app
-description: "Эйнштейн — торговый терминал для Bybit."
+description: "Эйнштейн — торговый и аналитический терминал для Bybit (Paper + Real)."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,6 +11,23 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  intl: ^0.19.0
+  provider: ^6.1.2
+  hive_ce: ^2.1.0
+  hive_ce_flutter: ^2.1.0
+  path_provider: ^2.1.4
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  dio: ^5.7.0
+  crypto: ^3.0.6
+  flutter_foreground_task: ^8.17.0
+  flutter_local_notifications: ^17.2.4
+  permission_handler: ^11.3.1
+  fl_chart: ^0.69.0
+  candlesticks: ^2.1.0
+  timezone: ^0.9.4
+  logger: ^2.4.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
