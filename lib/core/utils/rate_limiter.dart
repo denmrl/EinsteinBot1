@@ -16,7 +16,7 @@ class RateLimiter {
   /// Задержка между запросами (мс). 1.6 сек × 60 = 96 req/min — ниже лимита 120.
   static const int _delayMs = 1600;
   /// Момент последнего запроса (мс, Unix Epoch).
-  int _lastCallMs;
+  int _lastCallMs = 0;
   /// Очередь ожидающих запросов — формируется автоматически,
   /// потому что все вызовы идут через один `await`.
   Future<void> _tail = Future.value();

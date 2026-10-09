@@ -61,7 +61,7 @@ class EinsteinTaskHandler extends TaskHandler {
   }
 
   @override
-  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
+  Future<void> onDestroy(DateTime timestamp) async {
     _log.i('FGS останавливается...');
     _uiTimer?.cancel();
     _uiTimer = null;
