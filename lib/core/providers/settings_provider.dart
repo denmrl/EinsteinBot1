@@ -1,9 +1,6 @@
 // ==========================================================
 //  ЭЙНШТЕЙН — Провайдер настроек и баланса
 //  Файл: lib/core/providers/settings_provider.dart
-//  • Хранит BotSettings + тему + режим торговли.
-//  • Управляет API-ключами Bybit.
-//  • Тянет курс USD/RUB раз в сутки.
 // ==========================================================
 
 import 'package:flutter/material.dart';
@@ -19,7 +16,6 @@ class SettingsProvider extends ChangeNotifier {
   final _repo = SettingsRepository.instance;
   final _balance = BalanceRepository.instance;
 
-  // ---------- Состояние ----------
   BotSettings _settings = const BotSettings();
   bool _loading = true;
   double? _usdRubRate;

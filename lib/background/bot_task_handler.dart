@@ -1,7 +1,7 @@
 // ==========================================================
 //  ЭЙНШТЕЙН — Точка входа изолята Foreground Service
 //  Файл: lib/background/bot_task_handler.dart
-//  Совместимо с flutter_foreground_task 8.17.0 (без Firebase).
+//  Без Firebase. Совместимо с flutter_foreground_task 8.17.0.
 // ==========================================================
 
 import 'dart:async';
@@ -81,7 +81,7 @@ class EinsteinTaskHandler extends TaskHandler {
     _started = false;
   }
 
-  // В 8.17.0 параметр — Object (не RemoteMessage).
+  // 8.17.0: параметр Object (не RemoteMessage).
   @override
   void onReceiveData(Object data) {
     _log.i('📩 FGS → UI: $data');

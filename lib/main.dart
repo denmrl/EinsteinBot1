@@ -1,5 +1,5 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Точка входа (совместимо с flutter_foreground_task 8.17.0)
+//  ЭЙНШТЕЙН — Точка входа
 //  Файл: lib/main.dart
 // ==========================================================
 
@@ -46,9 +46,6 @@ Future<void> main() async {
   );
 }
 
-// ==========================================================
-// 💾 HIVE
-// ==========================================================
 Future<void> _initHive() async {
   await Hive.initFlutter();
   await Future.wait([
@@ -62,27 +59,18 @@ Future<void> _initHive() async {
   debugPrint('✅ [Hive] Все боксы открыты');
 }
 
-// ==========================================================
-// 🌍 TIMEZONE
-// ==========================================================
 Future<void> _initTimezone() async {
   tz_data.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
   debugPrint('✅ [TZ] ${tz.local.name}');
 }
 
-// ==========================================================
-// 🌐 i18n
-// ==========================================================
 Future<void> _initLocalization() async {
   await initializeDateFormatting('ru_RU', null);
   debugPrint('✅ [i18n] ru_RU загружено');
 }
 
-// ==========================================================
-// 🔔 FOREGROUND TASK (init)
 // 8.17.0: без serviceTypes, без NotificationIconData.
-// ==========================================================
 void _initForegroundTask() {
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
@@ -104,9 +92,6 @@ void _initForegroundTask() {
   debugPrint('✅ [FGS] Foreground Task инициализирован');
 }
 
-// ==========================================================
-// 🎨 КОРНЕВОЙ WIDGET
-// ==========================================================
 class EinsteinApp extends StatelessWidget {
   const EinsteinApp({super.key});
 

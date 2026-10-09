@@ -84,7 +84,6 @@ class SearcherEngine {
       if (oi < settings.minOpenInterest) continue;
       if (estCap < settings.minEstimatedCap ||
           estCap > settings.maxEstimatedCap) continue;
-
       if (p24 < 1.5 && !watchedSymbols.contains(sym)) continue;
 
       valid.add(t);
@@ -111,7 +110,7 @@ class SearcherEngine {
   }
 
   // ==========================================================
-  // 👁 ПРОВЕРКА НАБЛЮДАЕМОЙ
+  // 👁 ПРОВЕРКА НАБЛЮДАЕМОЙ МОНЕТЫ
   // ==========================================================
   Future<void> _checkWatched(WatchedSetup w) async {
     final sym = w.symbol;
@@ -133,7 +132,7 @@ class SearcherEngine {
       return;
     }
 
-    // ✅ ИСПРАВЛЕНО: используем c15 (а не candles).
+    // ✅ Используем c15.
     final closes15 = c15.map((c) => c.close).toList();
     final ema9 = Indicators.ema(closes15, AppConstants.EMA_FAST).last;
     final ema20 = Indicators.ema(closes15, AppConstants.EMA_SLOW).last;
