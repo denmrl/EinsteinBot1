@@ -1,11 +1,6 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Экран настроек фильтров и риск-менеджмента
+//  ЭЙНШТЕЙН — Экран настроек (совместимо с Flutter 3.24)
 //  Файл: lib/presentation/screens/settings_screen.dart
-//  Разделы:
-//    1. Фильтры ликвидности (оборот / OI / капа).
-//    2. Параметры паттернов (импульс флага, V-разворот).
-//    3. Риск-менеджмент (плечо, риск на сделку).
-//  Плюс опасная зона: сброс демо-баланса и очистка истории.
 // ==========================================================
 
 import 'package:flutter/material.dart';
@@ -16,7 +11,6 @@ import '../../core/constants/app_constants.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/trades_provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/repositories/settings_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,27 +20,22 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // ---------- Контроллеры полей ----------
   late final _minTurnoverCtrl = TextEditingController();
   late final _maxTurnoverCtrl = TextEditingController();
   late final _minOiCtrl = TextEditingController();
   late final _capMultCtrl = TextEditingController();
-
   late final _flagImpulseCtrl = TextEditingController();
   late final _vrevWickCtrl = TextEditingController();
   late final _vrevVolCtrl = TextEditingController();
 
-  // Плечо и риск — слайдеры (double).
   double _leverage = 3;
   double _riskPct = 5.0;
-
   bool _dirty = false;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    // Заполняем поля текущими значениями.
     WidgetsBinding.instance.addPostFrameCallback((_) => _fillFromSettings());
   }
 
@@ -62,7 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  /// Считываем текущие настройки и раскладываем по полям.
   void _fillFromSettings() {
     final s = context.read<SettingsProvider>().settings;
     _minTurnoverCtrl.text = s.minTurnover24h.toStringAsFixed(0);
@@ -79,14 +67,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // ==========================================================
-  // 💾 СОХРАНЕНИЕ ИЗМЕНЕНИЙ
-  // ==========================================================
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
       final current = context.read<SettingsProvider>().settings;
-
       final updated = current.copyWith(
         minTurnover24h: _parse(_minTurnoverCtrl.text, current.minTurnover24h),
         maxTurnover24h: _parse(_maxTurnoverCtrl.text, current.maxTurnover24h),
@@ -100,7 +84,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leverage: _leverage.round(),
         riskPerTradePct: _riskPct,
       );
-
       await context.read<SettingsProvider>().updateSettings(updated);
       _snack('Настройки сохранены ✅');
       setState(() => _dirty = false);
@@ -116,27 +99,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return v ?? fallback;
   }
 
-  // ==========================================================
-  // ⚠️ ОПАСНАЯ ЗОНА — СБРОС
-  // ==========================================================
   Future<void> _resetBalance() async {
     final ok = await _confirm(
       title: 'Сбросить демо-баланс?',
       message: 'Виртуальный баланс вернётся к '
-          '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)} USDT, '
-          'история изменения баланса будет очищена.',
+          '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)} USDT.',
     );
     if (!ok) return;
     await context.read<SettingsProvider>().resetPaperAccount();
     if (!mounted) return;
-    _snack('Баланс сброшен к 1000 USDT ✅');
+    _snack('Баланс сброшен ✅');
   }
 
   Future<void> _clearHistory() async {
     final ok = await _confirm(
-      title: 'Очистить историю сделок?',
-      message: 'Все закрытые сделки будут удалены. '
-          'Винрейт и статистика обнулятся.',
+      title: 'Очистить историю?',
+      message: 'Все закрытые сделки будут удалены.',
     );
     if (!ok) return;
     await context.read<TradesProvider>().clearHistory();
@@ -153,10 +131,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.darkSurface,
         title: Text(title, style: const TextStyle(color: AppColors.accentRed)),
-        content: Text(
-          message,
-          style: const TextStyle(color: AppColors.darkTextPrimary),
-        ),
+        content: Text(message,
+            style: const TextStyle(color: AppColors.darkTextPrimary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -184,9 +160,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ));
   }
 
-  // ==========================================================
-  // 🎨 UI
-  // ==========================================================
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -196,7 +169,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Настройки бота'),
         actions: [
-          // Кнопка сохранения активна только при изменениях.
           TextButton(
             onPressed: (_dirty && !_saving) ? _save : null,
             child: _saving
@@ -225,13 +197,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: [
-                // ==========================================================
-                // 💧 ФИЛЬТРЫ ЛИКВИДНОСТИ
-                // ==========================================================
                 _SectionCard(
                   icon: Icons.water_drop_outlined,
                   title: 'Фильтры ликвидности',
-                  subtitle: 'Отбор монет по обороту, OI и оценочной капе',
+                  subtitle: 'Оборот, OI и оценочная капа',
                   children: [
                     _NumberField(
                       label: 'Мин. оборот 24ч, USDT',
@@ -252,50 +221,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: () => setState(() => _dirty = true),
                     ),
                     _NumberField(
-                      label: 'Коэффициент капы (×оборот)',
+                      label: 'Коэффициент капы',
                       hint: 'например 3.5',
                       controller: _capMultCtrl,
                       onChanged: () => setState(() => _dirty = true),
                     ),
                   ],
                 ),
-
-                // ==========================================================
-                // 📐 ПАРАМЕТРЫ ПАТТЕРНОВ
-                // ==========================================================
                 _SectionCard(
                   icon: Icons.auto_graph,
                   title: 'Параметры паттернов',
-                  subtitle: 'Чувствительность распознавания формаций',
+                  subtitle: 'Чувствительность распознавания',
                   children: [
                     _NumberField(
-                      label: 'Импульс Бычьего Флага (доля)',
-                      hint: '0.08 = 8% роста до консолидации',
+                      label: 'Импульс Бычьего Флага',
+                      hint: '0.08 = 8% роста',
                       controller: _flagImpulseCtrl,
                       onChanged: () => setState(() => _dirty = true),
                     ),
                     _NumberField(
                       label: 'V-Разворот: тень / тело',
-                      hint: '1.6 = тень в 1.6 раза больше тела',
+                      hint: '1.6',
                       controller: _vrevWickCtrl,
                       onChanged: () => setState(() => _dirty = true),
                     ),
                     _NumberField(
                       label: 'V-Разворот: спайк объёма',
-                      hint: '1.8 = объём в 1.8 раза выше среднего',
+                      hint: '1.8',
                       controller: _vrevVolCtrl,
                       onChanged: () => setState(() => _dirty = true),
                     ),
                   ],
                 ),
-
-                // ==========================================================
-                // 🛡 РИСК-МЕНЕДЖМЕНТ
-                // ==========================================================
                 _SectionCard(
                   icon: Icons.shield_outlined,
                   title: 'Риск-менеджмент',
-                  subtitle: 'Плечо и максимальный риск на сделку',
+                  subtitle: 'Плечо и риск на сделку',
                   children: [
                     _SliderField(
                       label: 'Кредитное плечо',
@@ -324,8 +285,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        'При риске $_riskPct% и балансе 1000 USDT максимальный '
-                        'убыток по одной сделке ≈ '
+                        'Максимальный убыток по одной сделке ≈ '
                         '${(1000 * _riskPct / 100).toStringAsFixed(1)} USDT',
                         style: const TextStyle(
                           color: AppColors.darkTextSecondary,
@@ -336,18 +296,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-
-                // ==========================================================
-                // ⚠️ ОПАСНАЯ ЗОНА
-                // ==========================================================
                 Container(
                   margin: const EdgeInsets.fromLTRB(12, 20, 12, 8),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.accentRed.withValues(alpha: 0.06),
+                    color: AppColors.accentRed.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppColors.accentRed.withValues(alpha: 0.3),
+                      color: AppColors.accentRed.withOpacity(0.3),
                     ),
                   ),
                   child: Column(
@@ -391,9 +347,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// ==========================================================
-// 🧱 КАРТОЧКА СЕКЦИИ
-// ==========================================================
 class _SectionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -426,11 +379,10 @@ class _SectionCard extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.accentBlue.withValues(alpha: 0.12),
+                  color: AppColors.accentBlue.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon,
-                    size: 18, color: AppColors.accentBlue),
+                child: Icon(icon, size: 18, color: AppColors.accentBlue),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -465,9 +417,6 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🔢 ЧИСЛОВОЕ ПОЛЕ
-// ==========================================================
 class _NumberField extends StatelessWidget {
   final String label;
   final String hint;
@@ -501,7 +450,7 @@ class _NumberField extends StatelessWidget {
           labelText: label,
           hintText: hint,
           hintStyle: TextStyle(
-            color: AppColors.darkTextSecondary.withValues(alpha: 0.5),
+            color: AppColors.darkTextSecondary.withOpacity(0.5),
             fontSize: 12,
           ),
         ),
@@ -510,9 +459,6 @@ class _NumberField extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🎚 СЛАЙДЕР
-// ==========================================================
 class _SliderField extends StatelessWidget {
   final String label;
   final String valueLabel;
@@ -575,9 +521,6 @@ class _SliderField extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// ⚠️ КНОПКА ОПАСНОГО ДЕЙСТВИЯ
-// ==========================================================
 class _DangerButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -606,7 +549,7 @@ class _DangerButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           side: BorderSide(
-            color: AppColors.accentRed.withValues(alpha: 0.4),
+            color: AppColors.accentRed.withOpacity(0.4),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

@@ -1,9 +1,7 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Карточки сетапов (активная сделка + наблюдение)
+//  ЭЙНШТЕЙН — Карточки сетапов
 //  Файл: lib/presentation/widgets/trade_card.dart
-//  • Плоский стиль ntfy: тонкая граница, скругление 16, лёгкая тень.
-//  • Тап по карточке — плавное раскрытие вниз.
-//  • Снизу — детали, мини-график и действия.
+//  Совместимо с Flutter 3.24 (withOpacity вместо withValues).
 // ==========================================================
 
 import 'package:flutter/material.dart';
@@ -66,10 +64,8 @@ class _ActiveTradeCardState extends State<ActiveTradeCard>
     final curr = widget.currentPrice ?? t.entryPrice;
     final pnlPct = ((curr - t.entryPrice) / t.entryPrice) * 100.0;
 
-    // Цвет бейджа: зелёный/красный в зависимости от PnL.
-    final accent = pnlPct >= 0
-        ? AppColors.accentGreen
-        : AppColors.accentRed;
+    final accent =
+        pnlPct >= 0 ? AppColors.accentGreen : AppColors.accentRed;
 
     return _CardShell(
       onTap: _toggle,
@@ -78,7 +74,6 @@ class _ActiveTradeCardState extends State<ActiveTradeCard>
       badgeIcon: Formatters.trendIcon(pnlPct),
       title: t.symbol,
       subtitle: t.patternName.isEmpty ? 'Сделка открыта' : t.patternName,
-      // Раскрываемая часть.
       expanded: _expanded,
       animation: _expand,
       child: _ActiveDetails(
@@ -111,8 +106,6 @@ class _ActiveDetails extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-
-        // ---------- Мини-график ----------
         if (miniCandles.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -130,18 +123,10 @@ class _ActiveDetails extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 12),
-
-        // ---------- Сетка уровней ----------
         _levelsGrid(t, currentPrice),
-
         const SizedBox(height: 12),
-
-        // ---------- Прогресс TP ----------
         _tpProgress(t),
-
         const SizedBox(height: 10),
-
-        // ---------- Мета ----------
         Row(
           children: [
             Expanded(
@@ -229,12 +214,7 @@ class _ActiveDetails extends StatelessWidget {
   }
 
   Widget _tpProgress(ActiveTrade t) {
-    // Прогресс = сколько этапов пройдено.
-    final steps = [
-      t.tp1Done,
-      t.tp2Done,
-      t.tp3TrailingActive,
-    ];
+    final steps = [t.tp1Done, t.tp2Done, t.tp3TrailingActive];
     return Row(
       children: List.generate(steps.length, (i) {
         final done = steps[i];
@@ -307,7 +287,6 @@ class _WatchedCardState extends State<WatchedCard>
   @override
   Widget build(BuildContext context) {
     final w = widget.setup;
-
     return _CardShell(
       onTap: _toggle,
       accentColor: AppColors.accentYellow,
@@ -335,7 +314,6 @@ class _WatchedDetails extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-
         Row(
           children: [
             Expanded(
@@ -375,7 +353,6 @@ class _WatchedDetails extends StatelessWidget {
             ),
           ],
         ),
-
         if (w.macroReason.isNotEmpty) ...[
           const SizedBox(height: 10),
           Container(
@@ -399,10 +376,7 @@ class _WatchedDetails extends StatelessWidget {
             ),
           ),
         ],
-
         const SizedBox(height: 12),
-
-        // ---------- Кнопки ----------
         Row(
           children: [
             Expanded(
@@ -429,7 +403,7 @@ class _WatchedDetails extends StatelessWidget {
 }
 
 // ==========================================================
-// 🧱 ОБЩАЯ «ОБОЛОЧКА» КАРТОЧКИ (шапка + раскрытие)
+// 🧱 ОБЩАЯ ОБОЛОЧКА
 // ==========================================================
 class _CardShell extends StatelessWidget {
   final VoidCallback onTap;
@@ -471,10 +445,8 @@ class _CardShell extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---------- Шапка ----------
               Row(
                 children: [
-                  // Левый акцентный «нос».
                   Container(
                     width: 4,
                     height: 40,
@@ -484,8 +456,6 @@ class _CardShell extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-
-                  // Заголовок и подзаголовок.
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,13 +481,11 @@ class _CardShell extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Бейдж статуса / PnL.
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.12),
+                      color: accentColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -537,8 +505,6 @@ class _CardShell extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Стрелка раскрытия.
                   AnimatedRotation(
                     duration: const Duration(milliseconds: 220),
                     turns: expanded ? 0.5 : 0.0,
@@ -549,8 +515,6 @@ class _CardShell extends StatelessWidget {
                   ),
                 ],
               ),
-
-              // ---------- Раскрывающийся блок ----------
               SizeTransition(
                 sizeFactor: animation,
                 axisAlignment: -1.0,
@@ -591,7 +555,7 @@ class _LevelBox extends StatelessWidget {
         color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(10),
         border: done
-            ? Border.all(color: color.withValues(alpha: 0.4), width: 1)
+            ? Border.all(color: color.withOpacity(0.4), width: 1)
             : null,
       ),
       child: Column(
@@ -602,8 +566,7 @@ class _LevelBox extends StatelessWidget {
               if (done)
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
-                  child: Icon(Icons.check_circle,
-                      size: 11, color: color),
+                  child: Icon(Icons.check_circle, size: 11, color: color),
                 ),
               Text(
                 label,
@@ -674,7 +637,7 @@ class _MetaRow extends StatelessWidget {
 }
 
 // ==========================================================
-// 📈 МИНИ-СПАРКЛАЙН (CustomPaint, без пакетов)
+// 📈 СПАРКЛАЙН
 // ==========================================================
 class _SparklinePainter extends CustomPainter {
   final List<Candle> candles;
@@ -686,7 +649,6 @@ class _SparklinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (candles.isEmpty) return;
 
-    // Диапазон min..max закрытий.
     double min = candles.first.close;
     double max = candles.first.close;
     for (final c in candles) {
@@ -695,7 +657,6 @@ class _SparklinePainter extends CustomPainter {
     }
     final range = (max - min).abs() < 1e-12 ? 1.0 : (max - min);
 
-    // ---------- Заливка под линией ----------
     final fillPath = Path();
     final linePath = Path();
 
@@ -722,14 +683,13 @@ class _SparklinePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          lineColor.withValues(alpha: 0.25),
-          lineColor.withValues(alpha: 0.0),
+          lineColor.withOpacity(0.25),
+          lineColor.withOpacity(0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     canvas.drawPath(fillPath, fillPaint);
 
-    // ---------- Линия ----------
     final linePaint = Paint()
       ..color = lineColor
       ..strokeWidth = 1.6

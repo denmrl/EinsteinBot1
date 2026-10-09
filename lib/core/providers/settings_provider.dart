@@ -1,11 +1,13 @@
 // ==========================================================
 //  ЭЙНШТЕЙН — Провайдер настроек и баланса
 //  Файл: lib/core/providers/settings_provider.dart
-//  • Хранит текущий BotSettings + тему + режим торговли.
-//  • Управляет API-ключами Bybit (через secure storage).
-//  • Тянет курс USD/RUB раз в сутки и даёт конвертацию баланса.
+//  • Хранит BotSettings + тему + режим торговли.
+//  • Управляет API-ключами Bybit.
+//  • Тянет курс USD/RUB раз в сутки.
 // ==========================================================
+
 import 'package:flutter/material.dart';
+
 import '../../data/repositories/balance_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 
@@ -13,6 +15,7 @@ class SettingsProvider extends ChangeNotifier {
   SettingsProvider() {
     _init();
   }
+
   final _repo = SettingsRepository.instance;
   final _balance = BalanceRepository.instance;
 
@@ -28,14 +31,17 @@ class SettingsProvider extends ChangeNotifier {
   ThemeMode get themeMode => _settings.themeMode;
   TradingMode get tradingMode => _settings.tradingMode;
   BybitEnvironment get environment => _settings.environment;
+
   bool get isLoading => _loading;
   double get paperBalanceUsdt => _paperBalance;
   double? get usdRubRate => _usdRubRate;
   bool get hasBybitCredentials => _hasKeys;
-  
-  double get paperBalanceRub => _usdRubRate == null
-      ? 0.0
-      : _paperBalance * _usdRubRate!;
+
+  double get paperBalanceRub =>
+      _usdRubRate == null ? 0.0 : _paperBalance * _usdRubRate!;
+
+  double? get balanceInRub =>
+      _usdRubRate == null ? null : _paperBalance * _usdRubRate!;
 
   // ==========================================================
   // 🚀 ИНИЦИАЛИЗАЦИЯ
@@ -44,18 +50,18 @@ class SettingsProvider extends ChangeNotifier {
     await reload();
   }
 
-  /// Полная перезагрузка настроек, ключей, курса и баланса.
   Future<void> reload() async {
     _loading = true;
     notifyListeners();
+
     try {
       _settings = await _repo.load();
       _hasKeys = await _repo.hasBybitCredentials();
       _paperBalance = _balance.getPaperBalance();
-      _usdRubRate = await _balance.getUsdRubRate(); 
+      _usdRubRate = await _balance.getUsdRubRate();
     } catch (e) {
       debugPrint('⚠ SettingsProvider.reload error: $e');
-    } finaly {
+    } finally {
       _loading = false;
       notifyListeners();
     }
@@ -83,7 +89,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ==========================================================
-  // ⚙️ ФИЛЬТРЫ (изменение на лету в экране настроек)
+  // ⚙️ ФИЛЬТРЫ
   // ==========================================================
   Future<void> updateSettings(BotSettings updated) async {
     _settings = updated;
@@ -92,7 +98,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ==========================================================
-  // 🔐 API-КЛЮЧИ BYBIT
+  // 🔐 API-КЛЮЧИ
   // ==========================================================
   Future<void> saveBybitKeys({
     required String apiKey,
@@ -134,7 +140,4 @@ class SettingsProvider extends ChangeNotifier {
     _paperBalance = _balance.getPaperBalance();
     notifyListeners();
   }
-
-  double? get balanceInRub =>
-      _usdRubRate == null ? null : _paperBalance * _usdRubRate!;
 }

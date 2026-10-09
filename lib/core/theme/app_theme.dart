@@ -2,43 +2,38 @@
 //  ЭЙНШТЕЙН — Темы оформления (Light / Dark)
 //  Файл: lib/core/theme/app_theme.dart
 //  Стиль: плоские карточки в духе ntfy-уведомлений.
+//  Совместимо с Flutter 3.24 (CardTheme, без CardThemeData).
 // ==========================================================
 
 import 'package:flutter/material.dart';
 
-/// Палитра бренда — используется и в темах, и в UI-виджетах.
 class AppColors {
   AppColors._();
 
-  // ---------- Акценты (одинаковые для обеих тем) ----------
-  static const Color accentGreen = Color(0xFF22C55E); // профит, вход
-  static const Color accentRed = Color(0xFFEF4444); // убыток, стоп
-  static const Color accentYellow = Color(0xFFF59E0B); // наблюдение, warning
-  static const Color accentBlue = Color(0xFF3B82F6); // информация, ссылки
-  static const Color accentPurple = Color(0xFF8B5CF6); // трейлинг, TP3
+  static const Color accentGreen  = Color(0xFF22C55E);
+  static const Color accentRed    = Color(0xFFEF4444);
+  static const Color accentYellow = Color(0xFFF59E0B);
+  static const Color accentBlue   = Color(0xFF3B82F6);
+  static const Color accentPurple = Color(0xFF8B5CF6);
 
-  // ---------- Тёмная тема ----------
-  static const Color darkBg = Color(0xFF0E1116); // фон приложения
-  static const Color darkSurface = Color(0xFF161B22); // карточки
-  static const Color darkSurfaceElevated = Color(0xFF1F2630); // raised
-  static const Color darkBorder = Color(0xFF262D38); // границы
-  static const Color darkTextPrimary = Color(0xFFE6EDF3); // основной текст
-  static const Color darkTextSecondary = Color(0xFF8B949E); // подписи
+  static const Color darkBg              = Color(0xFF0E1116);
+  static const Color darkSurface         = Color(0xFF161B22);
+  static const Color darkSurfaceElevated = Color(0xFF1F2630);
+  static const Color darkBorder          = Color(0xFF262D38);
+  static const Color darkTextPrimary     = Color(0xFFE6EDF3);
+  static const Color darkTextSecondary   = Color(0xFF8B949E);
 
-  // ---------- Светлая тема ----------
-  static const Color lightBg = Color(0xFFF5F7FA);
-  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightBg              = Color(0xFFF5F7FA);
+  static const Color lightSurface         = Color(0xFFFFFFFF);
   static const Color lightSurfaceElevated = Color(0xFFF0F3F8);
-  static const Color lightBorder = Color(0xFFE1E6ED);
-  static const Color lightTextPrimary = Color(0xFF1A1F26);
-  static const Color lightTextSecondary = Color(0xFF6B7280);
+  static const Color lightBorder          = Color(0xFFE1E6ED);
+  static const Color lightTextPrimary     = Color(0xFF1A1F26);
+  static const Color lightTextSecondary   = Color(0xFF6B7280);
 }
 
-/// Класс с готовыми ThemeData для светлой и тёмной тем.
 class AppTheme {
   AppTheme._();
 
-  /// Светлая тема.
   static ThemeData light() {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.accentBlue,
@@ -54,7 +49,6 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.lightBg,
       fontFamily: 'Roboto',
 
-      // ---------- AppBar ----------
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.lightSurface,
         foregroundColor: AppColors.lightTextPrimary,
@@ -68,8 +62,8 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Карточки (плоские, скруглённые) ----------
-      cardTheme: CardThemeData(
+      // ВАЖНО: CardTheme, а не CardThemeData (для Flutter 3.24).
+      cardTheme: CardTheme(
         color: AppColors.lightSurface,
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -79,7 +73,6 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Кнопки ----------
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
@@ -103,7 +96,6 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Поля ввода ----------
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.lightSurfaceElevated,
@@ -123,12 +115,9 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Переключатели ----------
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected)
-              ? Colors.white
-              : Colors.white,
+          (s) => Colors.white,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
@@ -137,14 +126,12 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Разделители ----------
       dividerTheme: const DividerThemeData(
         color: AppColors.lightBorder,
         thickness: 1,
         space: 1,
       ),
 
-      // ---------- Тексты ----------
       textTheme: const TextTheme(
         titleLarge: TextStyle(
           color: AppColors.lightTextPrimary,
@@ -172,7 +159,6 @@ class AppTheme {
     );
   }
 
-  /// Тёмная тема.
   static ThemeData dark() {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.accentBlue,
@@ -188,7 +174,6 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.darkBg,
       fontFamily: 'Roboto',
 
-      // ---------- AppBar ----------
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkBg,
         foregroundColor: AppColors.darkTextPrimary,
@@ -202,8 +187,7 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Карточки (плоские, скруглённые, тонкая граница) ----------
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: AppColors.darkSurface,
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -213,7 +197,6 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Кнопки ----------
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
@@ -237,7 +220,6 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Поля ввода ----------
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurfaceElevated,
@@ -257,7 +239,6 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Переключатели ----------
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
@@ -271,14 +252,12 @@ class AppTheme {
         ),
       ),
 
-      // ---------- Разделители ----------
       dividerTheme: const DividerThemeData(
         color: AppColors.darkBorder,
         thickness: 1,
         space: 1,
       ),
 
-      // ---------- Тексты ----------
       textTheme: const TextTheme(
         titleLarge: TextStyle(
           color: AppColors.darkTextPrimary,

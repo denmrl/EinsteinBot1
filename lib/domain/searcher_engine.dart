@@ -1,18 +1,17 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Движок сканера (порт shitcoin_searcher_thread)
+//  ЭЙНШТЕЙН — Движок сканера
 //  Файл: lib/domain/searcher_engine.dart
-//  Цикл раз в 30 сек:
-//    1) Фильтр тикеров (оборот, OI, капа, USDT, не EXCLUDE).
-//    2) Шаг 1: проверка наблюдаемых монет на вход/отмену.
-//    3) Шаг 2: скан новых кандидатов (топ-30 по обороту).
-//    4) Запись в watched_setups + локальный пуш.
 // ==========================================================
+
 import 'dart:async';
+
 import 'package:logger/logger.dart';
+
 import '../core/constants/app_constants.dart';
 import '../core/services/notification_service.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/indicators.dart';
+import '../data/models/candle.dart';
 import '../data/models/watched_setup.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/trades_repository.dart';
@@ -25,23 +24,21 @@ import 'position_manager.dart';
 class SearcherEngine {
   SearcherEngine._internal();
   static final SearcherEngine instance = SearcherEngine._internal();
+
   final _api = BybitApi.instance;
   final _cache = KlineCache.instance;
   final _trades = TradesRepository();
   final _settings = SettingsRepository.instance;
   final _notif = NotificationService.instance;
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
+
   Timer? _timer;
   bool _running = false;
 
-  /// Запуск периодического сканирования.
   void start() {
     if (_timer != null) return;
     _log.i('🔍 SearcherEngine запущен');
-    _timer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _tick(),
-    );
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _tick());
     _tick();
   }
 
@@ -51,11 +48,8 @@ class SearcherEngine {
     _log.i('⏹ SearcherEngine остановлен');
   }
 
-  // ==========================================================
-  // 🔄 ОДИН ПРОХОД СКАНЕРА
-  // ==========================================================
   Future<void> _tick() async {
-    if (_running) return; 
+    if (_running) return;
     _running = true;
     try {
       await _runScan();
@@ -71,39 +65,41 @@ class SearcherEngine {
     final activeSymbols = _trades.activeSymbols();
     final watchedSymbols = _trades.watchedSymbols();
 
-    // ---------- 1. Получаем тикеры ----------
     final tickers = await _api.getTickers();
     if (tickers.isEmpty) return;
 
-    // ---------- 2. Фильтруем ----------
     final valid = <Map<String, dynamic>>[];
     for (final t in tickers) {
       final sym = (t['symbol'] ?? '').toString();
       if (!sym.endsWith('USDT')) continue;
       if (AppConstants.EXCLUDE_SYMBOLS.contains(sym)) continue;
+
       final turnover = _d(t['turnover24h']);
       final oi = _d(t['openInterestValue']);
       final p24 = _d(t['price24hPcnt']).abs() * 100.0;
       final estCap = turnover * settings.capMultiplier;
+
       if (turnover < settings.minTurnover24h ||
           turnover > settings.maxTurnover24h) continue;
       if (oi < settings.minOpenInterest) continue;
       if (estCap < settings.minEstimatedCap ||
           estCap > settings.maxEstimatedCap) continue;
+
       if (p24 < 1.5 && !watchedSymbols.contains(sym)) continue;
+
       valid.add(t);
     }
 
-    // ---------- 3. ШАГ 1: проверка наблюдаемых ----------
     final watched = _trades.loadWatchedSetups();
     for (final w in watched) {
       if (activeSymbols.contains(w.symbol)) continue;
       await _checkWatched(w);
     }
 
-    // ---------- 4. ШАГ 2: новые кандидаты (топ-30 по обороту) ----------
-    valid.sort((a, b) => _d(b['turnover24h']).compareTo(_d(a['turnover24h'])));
+    valid.sort(
+        (a, b) => _d(b['turnover24h']).compareTo(_d(a['turnover24h'])));
     final batch = valid.take(30).toList();
+
     for (final t in batch) {
       final sym = (t['symbol'] ?? '').toString();
       if (activeSymbols.contains(sym) || watchedSymbols.contains(sym)) {
@@ -115,7 +111,7 @@ class SearcherEngine {
   }
 
   // ==========================================================
-  // 👁 ПРОВЕРКА НАБЛЮДАЕМОЙ МОНЕТЫ
+  // 👁 ПРОВЕРКА НАБЛЮДАЕМОЙ
   // ==========================================================
   Future<void> _checkWatched(WatchedSetup w) async {
     final sym = w.symbol;
@@ -123,10 +119,10 @@ class SearcherEngine {
     final c15 = await _fetchKline(sym, '15');
     final c1h = await _fetchKline(sym, '60');
     if (c5.isEmpty || c15.isEmpty || c1h.isEmpty) return;
+
     final m5Close = c5.last.close;
     final check1h = c1h.length >= 2 ? c1h[c1h.length - 2] : c1h.last;
 
-    // ---------- Отмена: пробой исторического дна ----------
     if (Indicators.isStrongHistoricalLowBreakout(check1h, w.historicalLow)) {
       await _trades.removeWatchedTrade(sym);
       await _notif.signal(
@@ -137,30 +133,34 @@ class SearcherEngine {
       return;
     }
 
-    // ---------- Подтверждение входа ----------
+    // ✅ ИСПРАВЛЕНО: используем c15 (а не candles).
     final closes15 = c15.map((c) => c.close).toList();
     final ema9 = Indicators.ema(closes15, AppConstants.EMA_FAST).last;
     final ema20 = Indicators.ema(closes15, AppConstants.EMA_SLOW).last;
     final rsi15 = Indicators.rsi(closes15, period: AppConstants.RSI_PERIOD);
-    final prevVols = c15.sublist(c15.length - 10, c15.length - 1)
+
+    final prevVols = c15
+        .sublist(c15.length - 10, c15.length - 1)
         .map((c) => c.volume)
         .toList();
     final avgVol = prevVols.isEmpty
         ? 1.0
         : prevVols.reduce((a, b) => a + b) / prevVols.length;
     final volSpike = avgVol > 0 ? c15.last.volume / avgVol : 1.0;
+
     final confirmed =
-        (volSpike >= AppConstants.ENTRY_VOLUME_SPIKE || m5Close >= w.triggerPrice) &&
-        ema9 > ema20 &&
-        rsi15 <= AppConstants.RSI_MAX_ENTRY;
+        (volSpike >= AppConstants.ENTRY_VOLUME_SPIKE ||
+                m5Close >= w.triggerPrice) &&
+            ema9 > ema20 &&
+            rsi15 <= AppConstants.RSI_MAX_ENTRY;
 
     if (!confirmed) return;
 
-    // ---------- Вход в позицию ----------
     final entryP = m5Close;
     final stopLoss = w.patternLow > 0
         ? w.patternLow * AppConstants.SL_PATTERN_LOW_MULTIPLIER
         : entryP * AppConstants.SL_FALLBACK_MULTIPLIER;
+
     await PositionManager.instance.openPosition(
       symbol: sym,
       entryPrice: entryP,
@@ -198,6 +198,7 @@ class SearcherEngine {
       macroReason: macro.reason,
     );
     await _trades.saveWatchedSetup(setup);
+
     await _notif.signal(
       title: '👀 Наблюдение: $symbol',
       body: '${pat.name}\n'
@@ -214,6 +215,7 @@ class SearcherEngine {
   Future<List<Candle>> _fetchKline(String symbol, String interval) async {
     final cached = _cache.get(symbol, interval);
     if (cached != null) return cached;
+
     final list = await _api.getKline(symbol: symbol, interval: interval);
     _cache.put(symbol, interval, list);
     return list;

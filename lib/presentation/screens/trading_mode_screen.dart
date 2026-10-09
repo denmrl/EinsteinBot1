@@ -1,10 +1,6 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Экран управления ботом
+//  ЭЙНШТЕЙН — Экран управления ботом (совместимо с Flutter 3.24)
 //  Файл: lib/presentation/screens/trading_mode_screen.dart
-//  • Большой тумблер «Запустить / Остановить бота».
-//  • Переключатель Paper ↔ Real.
-//  • Переключатель Mainnet ↔ Testnet (только для Real).
-//  • Поля ввода Bybit API (только для Real).
 // ==========================================================
 
 import 'package:flutter/material.dart';
@@ -26,10 +22,8 @@ class TradingModeScreen extends StatefulWidget {
 }
 
 class _TradingModeScreenState extends State<TradingModeScreen> {
-  // ---------- Контроллеры полей ключей ----------
   final _apiKeyCtrl = TextEditingController();
   final _apiSecretCtrl = TextEditingController();
-
   bool _obscureSecret = true;
   bool _savingKeys = false;
   bool _checkingConnection = false;
@@ -41,15 +35,12 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
     super.dispose();
   }
 
-  // ==========================================================
-  // 🔐 СОХРАНЕНИЕ API-КЛЮЧЕЙ
-  // ==========================================================
   Future<void> _saveKeys() async {
     final apiKey = _apiKeyCtrl.text.trim();
     final apiSecret = _apiSecretCtrl.text.trim();
 
     if (apiKey.isEmpty || apiSecret.isEmpty) {
-      _snack('Заполните оба поля: API Key и API Secret', isError: true);
+      _snack('Заполните оба поля', isError: true);
       return;
     }
 
@@ -58,17 +49,13 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
       final settings = context.read<SettingsProvider>();
       await settings.saveBybitKeys(apiKey: apiKey, apiSecret: apiSecret);
 
-      // Применяем контур (mainnet/testnet) к BybitApi.
       if (settings.environment == BybitEnvironment.mainnet) {
         BybitTradingService.instance.switchToMainnet();
       } else {
         BybitTradingService.instance.switchToTestnet();
       }
-      // Устанавливаем ключи в клиент.
       BybitApi.instance.setCredentials(
-        apiKey: apiKey,
-        apiSecret: apiSecret,
-      );
+          apiKey: apiKey, apiSecret: apiSecret);
 
       _snack('Ключи сохранены ✅');
     } catch (e) {
@@ -78,20 +65,14 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
     }
   }
 
-  // ==========================================================
-  // 📡 ПРОВЕРКА ПОДКЛЮЧЕНИЯ
-  // ==========================================================
   Future<void> _checkConnection() async {
     setState(() => _checkingConnection = true);
     try {
-      // Публичный эндпоинт — проверяет интернет.
       final tickers = await BybitApi.instance.getTickers();
       if (tickers.isEmpty) {
         _snack('Bybit вернул пустой ответ', isError: true);
         return;
       }
-
-      // Если есть ключи — проверяем приватный эндпоинт.
       if (BybitApi.instance.hasCredentials) {
         final bal = await BybitTradingService.instance.getWalletBalanceUsdt();
         _snack('Подключено ✅ Баланс: ${bal.toStringAsFixed(2)} USDT');
@@ -105,9 +86,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
     }
   }
 
-  // ==========================================================
-  // 🛑 ПОДТВЕРЖДЕНИЕ СТАРТА В REAL + MAINNET
-  // ==========================================================
   Future<bool> _confirmRealMoney() async {
     final res = await showDialog<bool>(
       context: context,
@@ -116,8 +94,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
         title: const Text('⚠️ Реальные деньги!',
             style: TextStyle(color: AppColors.accentRed)),
         content: const Text(
-          'Бот будет торговать на РЕАЛЬНОМ счёте Bybit. '
-          'Продолжайте только если вы осознаёте риск потерь.',
+          'Бот будет торговать на РЕАЛЬНОМ счёте Bybit.',
           style: TextStyle(color: AppColors.darkTextPrimary),
         ),
         actions: [
@@ -138,9 +115,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
     return res ?? false;
   }
 
-  // ==========================================================
-  // 🎨 UI
-  // ==========================================================
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -154,14 +128,12 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          // ---------- 1. Большой тумблер бота ----------
           _BigToggleCard(
             running: bot.isRunning,
             busy: bot.isBusy,
             isReal: isReal,
             isMainnet: isMainnet,
             onToggle: (value) async {
-              // Доп. подтверждение для реальных денег.
               if (value && isReal && isMainnet) {
                 final ok = await _confirmRealMoney();
                 if (!ok) return;
@@ -170,8 +142,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
               await context.read<BotStatusProvider>().toggle(value);
             },
           ),
-
-          // ---------- 2. Выбор режима ----------
           _SectionTitle('Режим торговли'),
           _SegmentedRow<TradingMode>(
             values: const [TradingMode.paper, TradingMode.real],
@@ -186,7 +156,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                 ? AppColors.accentBlue
                 : AppColors.accentRed,
             onChanged: (m) async {
-              // Смена режима при запущенном боте — стоп.
               if (bot.isRunning) {
                 final ok = await _confirmStop();
                 if (!ok) return;
@@ -196,8 +165,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
               await settings.setTradingMode(m);
             },
           ),
-
-          // ---------- 3. Контур (только для Real) ----------
           if (isReal) ...[
             _SectionTitle('Контур Bybit'),
             _SegmentedRow<BybitEnvironment>(
@@ -223,8 +190,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                 }
                 if (!mounted) return;
                 await settings.setEnvironment(e);
-
-                // Сразу применяем к клиенту.
                 if (e == BybitEnvironment.mainnet) {
                   BybitTradingService.instance.switchToMainnet();
                 } else {
@@ -232,8 +197,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                 }
               },
             ),
-
-            // ---------- 4. Ключи API ----------
             _SectionTitle('API-ключи Bybit'),
             _ApiKeysCard(
               keyCtrl: _apiKeyCtrl,
@@ -255,17 +218,15 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                 _snack('Ключи удалены');
               },
             ),
-
-            // ---------- 5. Предупреждение для mainnet ----------
             if (isMainnet)
               Container(
                 margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.accentRed.withValues(alpha: 0.08),
+                  color: AppColors.accentRed.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppColors.accentRed.withValues(alpha: 0.4),
+                    color: AppColors.accentRed.withOpacity(0.4),
                   ),
                 ),
                 child: Row(
@@ -275,11 +236,10 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Mainnet = реальные деньги. Убедитесь, что API-ключ '
-                        'имеет только права Contract Trade (без вывода).',
+                        'Mainnet = реальные деньги. Убедитесь, что ключ '
+                        'имеет только права Contract Trade.',
                         style: TextStyle(
-                          color: AppColors.accentRed
-                              .withValues(alpha: 0.9),
+                          color: AppColors.accentRed.withOpacity(0.9),
                           fontSize: 12,
                           height: 1.35,
                         ),
@@ -289,15 +249,14 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                 ),
               ),
           ] else ...[
-            // Подсказка для демо.
             Container(
               margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.accentBlue.withValues(alpha: 0.08),
+                color: AppColors.accentBlue.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: AppColors.accentBlue.withValues(alpha: 0.3),
+                  color: AppColors.accentBlue.withOpacity(0.3),
                 ),
               ),
               child: Row(
@@ -308,8 +267,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                   Expanded(
                     child: Text(
                       'Paper Trading: виртуальный баланс '
-                      '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)} USDT. '
-                      'Все сделки симулируются локально.',
+                      '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)} USDT.',
                       style: const TextStyle(
                         color: AppColors.darkTextPrimary,
                         fontSize: 12,
@@ -326,7 +284,6 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
     );
   }
 
-  // ---------- Хелперы ----------
   Future<bool> _confirmStop() async {
     final res = await showDialog<bool>(
       context: context,
@@ -334,8 +291,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
         backgroundColor: AppColors.darkSurface,
         title: const Text('Остановить бота?'),
         content: const Text(
-          'Активные сделки останутся открытыми, но сопровождение '
-          'будет приостановлено.',
+          'Активные сделки останутся открытыми.',
           style: TextStyle(color: AppColors.darkTextPrimary),
         ),
         actions: [
@@ -360,7 +316,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
         backgroundColor: AppColors.darkSurface,
         title: const Text('Удалить API-ключи?'),
         content: const Text(
-          'Ключи будут стёрты из памяти приложения.',
+          'Ключи будут стёрты из памяти.',
           style: TextStyle(color: AppColors.darkTextPrimary),
         ),
         actions: [
@@ -392,7 +348,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
 }
 
 // ==========================================================
-// 🎛 КРУПНЫЙ ТУМБЛЕР «СТАРТ/СТОП»
+// 🎛 КРУПНЫЙ ТУМБЛЕР
 // ==========================================================
 class _BigToggleCard extends StatelessWidget {
   final bool running;
@@ -434,21 +390,20 @@ class _BigToggleCard extends StatelessWidget {
         color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: accent.withValues(alpha: running ? 0.6 : 0.2),
+          color: accent.withOpacity(running ? 0.6 : 0.2),
           width: 1.5,
         ),
       ),
       child: Column(
         children: [
-          // Иконка со свечением.
           Container(
             width: 68,
             height: 68,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
+              color: accent.withOpacity(0.12),
               shape: BoxShape.circle,
               border: Border.all(
-                color: accent.withValues(alpha: 0.4),
+                color: accent.withOpacity(0.4),
                 width: 1.5,
               ),
             ),
@@ -484,8 +439,6 @@ class _BigToggleCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Сам переключатель (увеличенный Switch).
           Transform.scale(
             scale: 1.35,
             child: Switch(
@@ -499,9 +452,6 @@ class _BigToggleCard extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 📑 ЗАГОЛОВОК СЕКЦИИ
-// ==========================================================
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
@@ -523,9 +473,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🎚 СЕГМЕНТИРОВАННЫЙ РЯД (Paper/Real, Mainnet/Testnet)
-// ==========================================================
 class _SegmentedRow<T> extends StatelessWidget {
   final List<T> values;
   final T current;
@@ -565,11 +512,11 @@ class _SegmentedRow<T> extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: selected
-                      ? color.withValues(alpha: 0.15)
+                      ? color.withOpacity(0.15)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border: selected
-                      ? Border.all(color: color.withValues(alpha: 0.5))
+                      ? Border.all(color: color.withOpacity(0.5))
                       : null,
                 ),
                 child: Row(
@@ -578,7 +525,9 @@ class _SegmentedRow<T> extends StatelessWidget {
                     Icon(
                       iconOf(v),
                       size: 16,
-                      color: selected ? color : AppColors.darkTextSecondary,
+                      color: selected
+                          ? color
+                          : AppColors.darkTextSecondary,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -603,9 +552,6 @@ class _SegmentedRow<T> extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🔐 КАРТОЧКА API-КЛЮЧЕЙ
-// ==========================================================
 class _ApiKeysCard extends StatelessWidget {
   final TextEditingController keyCtrl;
   final TextEditingController secretCtrl;
@@ -644,7 +590,6 @@ class _ApiKeysCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Индикатор статуса.
           Row(
             children: [
               Icon(
@@ -656,9 +601,7 @@ class _ApiKeysCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                hasSavedKeys
-                    ? 'Ключи сохранены'
-                    : 'Ключи не заданы',
+                hasSavedKeys ? 'Ключи сохранены' : 'Ключи не заданы',
                 style: TextStyle(
                   color: hasSavedKeys
                       ? AppColors.accentGreen
@@ -670,8 +613,6 @@ class _ApiKeysCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
-          // ---------- API Key ----------
           TextField(
             controller: keyCtrl,
             style: const TextStyle(color: AppColors.darkTextPrimary),
@@ -681,8 +622,6 @@ class _ApiKeysCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
-          // ---------- API Secret ----------
           TextField(
             controller: secretCtrl,
             obscureText: obscureSecret,
@@ -702,8 +641,6 @@ class _ApiKeysCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-
-          // ---------- Кнопки ----------
           Row(
             children: [
               Expanded(

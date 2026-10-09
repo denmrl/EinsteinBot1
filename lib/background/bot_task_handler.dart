@@ -1,30 +1,31 @@
 // ==========================================================
 //  ЭЙНШТЕЙН — Точка входа изолята Foreground Service
 //  Файл: lib/background/bot_task_handler.dart
-//  Здесь живёт фоновая задача, которую Android держит в шторке.
+//  Совместимо с flutter_foreground_task 8.17.0 (без Firebase).
 // ==========================================================
+
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
 import '../core/constants/app_constants.dart';
 import '../core/services/notification_service.dart';
 import '../domain/daily_scheduler.dart';
 import '../domain/exit_monitor_engine.dart';
 import '../domain/searcher_engine.dart';
 
-/// Точка входа для изолята. Обязательно помечаем @pragma('vm:entry-point').
 @pragma('vm:entry-point')
 void startCallback() {
   DartPluginRegistrant.ensureInitialized();
   FlutterForegroundTask.setTaskHandler(EinsteinTaskHandler());
 }
 
-/// Обработчик задачи FGS.
 class EinsteinTaskHandler extends TaskHandler {
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
   Timer? _uiTimer;
@@ -33,6 +34,7 @@ class EinsteinTaskHandler extends TaskHandler {
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _log.i('🔧 Foreground Service изолят запущен ($starter)');
+
     try {
       final dir = await getApplicationDocumentsDirectory();
       Hive.init(dir.path);
@@ -44,17 +46,17 @@ class EinsteinTaskHandler extends TaskHandler {
         Hive.openBox(AppConstants.BOX_BALANCE_HISTORY),
         Hive.openBox(AppConstants.BOX_EVENT_LOG),
       ]);
-      
+
       tz_data.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
-      
+
       await NotificationService.instance.init();
-      
+
       SearcherEngine.instance.start();
       ExitMonitorEngine.instance.start();
       DailyScheduler.instance.start();
       _started = true;
-      
+
       _uiTimer = Timer.periodic(
         const Duration(seconds: 30),
         (_) => _refreshNotification(),
@@ -70,6 +72,7 @@ class EinsteinTaskHandler extends TaskHandler {
     _log.i('⏹ Foreground Service останавливается…');
     _uiTimer?.cancel();
     _uiTimer = null;
+
     if (_started) {
       SearcherEngine.instance.stop();
       ExitMonitorEngine.instance.stop();
@@ -78,10 +81,10 @@ class EinsteinTaskHandler extends TaskHandler {
     _started = false;
   }
 
+  // В 8.17.0 параметр — Object (не RemoteMessage).
   @override
-  void onReceiveData(RemoteMessage message) {
-    final type = message.data?['action'];
-    _log.i('📩 FGS → UI: $type');
+  void onReceiveData(Object data) {
+    _log.i('📩 FGS → UI: $data');
   }
 
   @override
@@ -89,9 +92,6 @@ class EinsteinTaskHandler extends TaskHandler {
     _refreshNotification();
   }
 
-  // ==========================================================
-  // 🔔 ОБНОВЛЕНИЕ ИКОНКИ В ШТОРКЕ
-  // ==========================================================
   Future<void> _refreshNotification() async {
     int activeCount = 0;
     int watchedCount = 0;
@@ -103,8 +103,10 @@ class EinsteinTaskHandler extends TaskHandler {
         watchedCount = Hive.box(AppConstants.BOX_WATCHED_SETUPS).length;
       }
     } catch (_) {}
-    
-    final text = 'Сделок: $activeCount | Наблюдаю: $watchedCount | ${_nowMskStr()} МСК';
+
+    final text = 'Сделок: $activeCount | Наблюдаю: $watchedCount | '
+        '${_nowMskStr()} МСК';
+
     await FlutterForegroundTask.updateService(
       notificationTitle: 'Эйнштейн — бот работает',
       notificationText: text,

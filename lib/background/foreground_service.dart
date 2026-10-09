@@ -1,11 +1,11 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Менеджер Foreground Service для UI
+//  ЭЙНШТЕЙН — Foreground Service (совместимо с 8.17.0)
 //  Файл: lib/background/foreground_service.dart
-//  Содержит start() / stop() / isRunning().
-//  Привязывается к тумблеру «Запустить бота» в UI.
 // ==========================================================
+
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:logger/logger.dart';
+
 import '../core/constants/app_constants.dart';
 import '../core/services/notification_service.dart';
 import 'bot_task_handler.dart';
@@ -14,20 +14,19 @@ class ForegroundServiceManager {
   ForegroundServiceManager._internal();
   static final ForegroundServiceManager instance =
       ForegroundServiceManager._internal();
+
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
 
-  // ==========================================================
-  // 📥 ПРОВЕРКА СТАТУСА
-  // ==========================================================
   Future<bool> isRunning() => FlutterForegroundTask.isRunningService;
 
   // ==========================================================
-  // 🚀 СТАРТ СЕРВИСА
+  // 🚀 СТАРТ
   // ==========================================================
-  /// Запуск. Возвращает true, если сервис стартовал.
   Future<bool> start() async {
-    final notifOk = await FlutterForegroundTask.checkNotificationPermission();
-    if (!notifOk) {
+    // В 8.17.0 checkNotificationPermission возвращает NotificationPermission.
+    final permission =
+        await FlutterForegroundTask.checkNotificationPermission();
+    if (permission != NotificationPermission.granted) {
       await FlutterForegroundTask.requestNotificationPermission();
     }
 
@@ -38,14 +37,6 @@ class ForegroundServiceManager {
         channelDescription: AppConstants.NOTIF_CHANNEL_SERVICE_DESC,
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
-        iconData: const NotificationIconData(
-          resType: ResourceType.drawable,
-          resPrefix: ResourcePrefix.ic,
-          name: 'stat_einstein',
-        ),
-        buttons: const [
-          NotificationButton(id: 'stop', text: 'Остановить'),
-        ],
       ),
       iosNotificationOptions: const IOSNotificationOptions(),
       foregroundTaskOptions: ForegroundTaskOptions(
@@ -58,20 +49,20 @@ class ForegroundServiceManager {
     );
 
     await NotificationService.instance.init();
-    
+
     final result = await FlutterForegroundTask.startService(
       serviceId: 100,
-      serviceTypes: const [ForegroundServiceTypes.dataSync],
       notificationTitle: 'Эйнштейн — запуск бота…',
       notificationText: 'Подключаюсь к Bybit…',
-      callback: startCallback, 
+      callback: startCallback,
     );
+
     _log.i('🚀 Foreground Service start result: $result');
     return result is ServiceRequestSuccess;
   }
 
   // ==========================================================
-  // ⏹ ОСТАНОВКА СЕРВИСА
+  // ⏹ СТОП
   // ==========================================================
   Future<void> stop() async {
     await FlutterForegroundTask.stopService();
@@ -79,7 +70,7 @@ class ForegroundServiceManager {
   }
 
   // ==========================================================
-  // 🎛 СЛУШАТЕЛЬ СОБЫТИЙ
+  // 📡 ПОДПИСКА НА СОБЫТИЯ
   // ==========================================================
   void subscribe({
     void Function()? onStarted,

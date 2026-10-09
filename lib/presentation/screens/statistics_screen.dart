@@ -1,9 +1,6 @@
 // ==========================================================
-//  ЭЙНШТЕЙН — Экран статистики и графиков PnL
+//  ЭЙНШТЕЙН — Экран статистики (совместимо с Flutter 3.24)
 //  Файл: lib/presentation/screens/statistics_screen.dart
-//  • График изменения баланса (CustomPaint, без пакетов).
-//  • Бейджи: винрейт, чистый PnL, коэфф. Прибыль/Убыток, баланс $/₽.
-//  • Список последних 5 закрытых сделок.
 // ==========================================================
 
 import 'package:flutter/material.dart';
@@ -25,9 +22,6 @@ class StatisticsScreen extends StatefulWidget {
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
   final _balance = BalanceRepository.instance;
-
-  // Кэш точек графика — обновляется при каждом входе на экран
-  // и по кнопке «Обновить».
   List<BalancePoint> _history = const [];
 
   @override
@@ -45,7 +39,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final trades = context.watch<TradesProvider>();
     final settings = context.watch<SettingsProvider>();
 
-    // Если истории ещё нет — построим хотя бы одну точку из текущего баланса.
     final chartPoints = _history.isNotEmpty
         ? _history
         : [
@@ -61,7 +54,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         title: const Text('Статистика'),
         actions: [
           IconButton(
-            tooltip: 'Обновить курс и график',
+            tooltip: 'Обновить',
             icon: const Icon(Icons.refresh),
             onPressed: () async {
               await settings.refreshUsdRub();
@@ -80,25 +73,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 32),
           children: [
-            // ==========================================================
-            // 💰 БОЛЬШАЯ КАРТОЧКА БАЛАНСА
-            // ==========================================================
             _BalanceHeadlineCard(
               usdt: settings.paperBalanceUsdt,
               rub: settings.balanceInRub,
               rate: settings.usdRubRate,
               pnlUsdt: trades.totalPnlUsdt,
             ),
-
-            // ==========================================================
-            // 📈 ГРАФИК БАЛАНСА
-            // ==========================================================
             _SectionTitle('Динамика баланса'),
             _BalanceChartCard(points: chartPoints),
-
-            // ==========================================================
-            // 🎯 БЕЙДЖИ СТАТИСТИКИ
-            // ==========================================================
             _SectionTitle('Статистика'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -110,10 +92,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         child: _StatBadge(
                           icon: '🏆',
                           label: 'Винрейт',
-                          value: Formatters.percent(trades.winRatePct, decimals: 1),
+                          value: Formatters.percent(trades.winRatePct,
+                              decimals: 1),
                           color: _winRateColor(trades.winRatePct),
                           subtitle:
-                              '${trades.wins} / ${trades.totalTrades} сделок',
+                              '${trades.wins} / ${trades.totalTrades}',
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -135,7 +118,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         child: _StatBadge(
                           icon: '🟢',
                           label: 'Профит',
-                          value: '+${trades.totalGainPct.toStringAsFixed(2)}%',
+                          value:
+                              '+${trades.totalGainPct.toStringAsFixed(2)}%',
                           color: AppColors.accentGreen,
                           subtitle: 'суммарный',
                         ),
@@ -145,7 +129,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         child: _StatBadge(
                           icon: '🔴',
                           label: 'Убыток',
-                          value: '-${trades.totalLossPct.toStringAsFixed(2)}%',
+                          value:
+                              '-${trades.totalLossPct.toStringAsFixed(2)}%',
                           color: AppColors.accentRed,
                           subtitle: 'суммарный',
                         ),
@@ -155,10 +140,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 ],
               ),
             ),
-
-            // ==========================================================
-            // 📜 ПОСЛЕДНИЕ 5 СДЕЛОК
-            // ==========================================================
             _SectionTitle('Последние сделки'),
             if (trades.history.isEmpty)
               const _EmptyHistory()
@@ -170,7 +151,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  // ---------- Хелперы ----------
   Color _winRateColor(double pct) {
     if (pct >= 60) return AppColors.accentGreen;
     if (pct >= 45) return AppColors.accentYellow;
@@ -191,9 +171,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 }
 
-// ==========================================================
-// 💰 КАРТОЧКА БАЛАНСА (крупная, сверху)
-// ==========================================================
 class _BalanceHeadlineCard extends StatelessWidget {
   final double usdt;
   final double? rub;
@@ -209,9 +186,8 @@ class _BalanceHeadlineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pnlColor = pnlUsdt >= 0
-        ? AppColors.accentGreen
-        : AppColors.accentRed;
+    final pnlColor =
+        pnlUsdt >= 0 ? AppColors.accentGreen : AppColors.accentRed;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 16, 12, 6),
@@ -250,8 +226,6 @@ class _BalanceHeadlineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // USDT
           Text(
             Formatters.usdt(usdt),
             style: const TextStyle(
@@ -262,12 +236,8 @@ class _BalanceHeadlineCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-
-          // RUB
           Text(
-            rub == null
-                ? '— ₽ (курс загружается)'
-                : Formatters.rub(rub!),
+            rub == null ? '— ₽' : Formatters.rub(rub!),
             style: const TextStyle(
               color: AppColors.darkTextSecondary,
               fontSize: 15,
@@ -275,12 +245,10 @@ class _BalanceHeadlineCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-
-          // PnL в USDT
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: pnlColor.withValues(alpha: 0.1),
+              color: pnlColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -311,9 +279,6 @@ class _BalanceHeadlineCard extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 📈 КАРТОЧКА С ГРАФИКОМ БАЛАНСА
-// ==========================================================
 class _BalanceChartCard extends StatelessWidget {
   final List<BalancePoint> points;
 
@@ -321,13 +286,11 @@ class _BalanceChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Определяем цвет графика по общему тренду.
     final isGrowing = points.length < 2
         ? true
         : points.last.balance >= points.first.balance;
-    final accent = isGrowing
-        ? AppColors.accentGreen
-        : AppColors.accentRed;
+    final accent =
+        isGrowing ? AppColors.accentGreen : AppColors.accentRed;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -340,7 +303,6 @@ class _BalanceChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок с диапазоном.
           Row(
             children: [
               Expanded(
@@ -365,8 +327,6 @@ class _BalanceChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // Сам график.
           SizedBox(
             height: 160,
             width: double.infinity,
@@ -378,7 +338,7 @@ class _BalanceChartCard extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.darkTextSecondary
-                            .withValues(alpha: 0.7),
+                            .withOpacity(0.7),
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -392,8 +352,6 @@ class _BalanceChartCard extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 8),
-
-          // Подписи по времени.
           if (points.length >= 2)
             Row(
               children: [
@@ -428,9 +386,6 @@ class _BalanceChartCard extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🎨 PAINTER ДЛЯ ГРАФИКА БАЛАНСА
-// ==========================================================
 class _BalanceChartPainter extends CustomPainter {
   final List<BalancePoint> points;
   final Color lineColor;
@@ -441,7 +396,6 @@ class _BalanceChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
 
-    // ---------- Диапазон ----------
     double min = points.first.balance;
     double max = points.first.balance;
     for (final p in points) {
@@ -449,18 +403,17 @@ class _BalanceChartPainter extends CustomPainter {
       if (p.balance > max) max = p.balance;
     }
     final range = (max - min).abs() < 1e-9 ? 1.0 : (max - min);
-    // Отступ сверху/снизу, чтобы линия не касалась границ.
     const padding = 8.0;
     final drawHeight = size.height - padding * 2;
 
-    // ---------- Пути ----------
     final linePath = Path();
     final fillPath = Path();
 
     for (var i = 0; i < points.length; i++) {
       final x = (i / (points.length - 1)) * size.width;
-      final y =
-          padding + drawHeight - ((points[i].balance - min) / range) * drawHeight;
+      final y = padding +
+          drawHeight -
+          ((points[i].balance - min) / range) * drawHeight;
 
       if (i == 0) {
         linePath.moveTo(x, y);
@@ -474,19 +427,17 @@ class _BalanceChartPainter extends CustomPainter {
     fillPath.lineTo(size.width, size.height);
     fillPath.close();
 
-    // ---------- Заливка под линией ----------
     final fillPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          lineColor.withValues(alpha: 0.30),
-          lineColor.withValues(alpha: 0.02),
+          lineColor.withOpacity(0.30),
+          lineColor.withOpacity(0.02),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(fillPath, fillPaint);
 
-    // ---------- Линия ----------
     final linePaint = Paint()
       ..color = lineColor
       ..strokeWidth = 2.0
@@ -495,7 +446,6 @@ class _BalanceChartPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(linePath, linePaint);
 
-    // ---------- Последняя точка (пульс) ----------
     final lastX = size.width;
     final lastY = padding +
         drawHeight -
@@ -504,7 +454,7 @@ class _BalanceChartPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(lastX, lastY),
       6,
-      Paint()..color = lineColor.withValues(alpha: 0.25),
+      Paint()..color = lineColor.withOpacity(0.25),
     );
     canvas.drawCircle(
       Offset(lastX, lastY),
@@ -518,9 +468,6 @@ class _BalanceChartPainter extends CustomPainter {
       old.points != points || old.lineColor != lineColor;
 }
 
-// ==========================================================
-// 🎯 БЕЙДЖ СТАТИСТИКИ
-// ==========================================================
 class _StatBadge extends StatelessWidget {
   final String icon;
   final String label;
@@ -580,7 +527,7 @@ class _StatBadge extends StatelessWidget {
           Text(
             subtitle,
             style: TextStyle(
-              color: AppColors.darkTextSecondary.withValues(alpha: 0.8),
+              color: AppColors.darkTextSecondary.withOpacity(0.8),
               fontSize: 10,
             ),
           ),
@@ -590,9 +537,6 @@ class _StatBadge extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 📜 СТРОКА ЗАКРЫТОЙ СДЕЛКИ
-// ==========================================================
 class _ClosedTradeRow extends StatelessWidget {
   final ClosedTrade trade;
 
@@ -604,7 +548,6 @@ class _ClosedTradeRow extends StatelessWidget {
     final color = isWin ? AppColors.accentGreen : AppColors.accentRed;
     final pnl = trade.finalNetPnlPct;
 
-    // Иконка причины.
     IconData reasonIcon;
     if (trade.reason.contains('Trailing')) {
       reasonIcon = Icons.rocket_launch_outlined;
@@ -626,19 +569,16 @@ class _ClosedTradeRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Иконка причины.
           Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(reasonIcon, size: 18, color: color),
           ),
           const SizedBox(width: 12),
-
-          // Тикер + причина + дата.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,8 +599,7 @@ class _ClosedTradeRow extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.accentPurple
-                              .withValues(alpha: 0.15),
+                          color: AppColors.accentPurple.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -688,8 +627,6 @@ class _ClosedTradeRow extends StatelessWidget {
               ],
             ),
           ),
-
-          // PnL
           Text(
             Formatters.percentSigned(pnl),
             style: TextStyle(
@@ -703,7 +640,6 @@ class _ClosedTradeRow extends StatelessWidget {
     );
   }
 
-  /// "2026-10-08 14:30:00" → "08.10 14:30".
   String _shortDate(String s) {
     try {
       final parts = s.split(' ');
@@ -718,9 +654,6 @@ class _ClosedTradeRow extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 💤 ПУСТАЯ ИСТОРИЯ
-// ==========================================================
 class _EmptyHistory extends StatelessWidget {
   const _EmptyHistory();
 
@@ -738,7 +671,7 @@ class _EmptyHistory extends StatelessWidget {
         children: [
           Icon(Icons.receipt_long_outlined,
               size: 36,
-              color: AppColors.darkTextSecondary.withValues(alpha: 0.5)),
+              color: AppColors.darkTextSecondary.withOpacity(0.5)),
           const SizedBox(height: 10),
           const Text(
             'Пока ни одной закрытой сделки',
@@ -764,9 +697,6 @@ class _EmptyHistory extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🏷 ЗАГОЛОВОК СЕКЦИИ
-// ==========================================================
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
