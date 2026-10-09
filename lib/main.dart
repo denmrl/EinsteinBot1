@@ -20,7 +20,6 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Hive
   await Hive.initFlutter();
   await Future.wait([
     Hive.openBox(AppConstants.BOX_ACTIVE_TRADES),
@@ -31,11 +30,9 @@ Future<void> main() async {
     Hive.openBox(AppConstants.BOX_EVENT_LOG),
   ]);
 
-  // Timezone
   tz_data.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
 
-  // Localization
   await initializeDateFormatting('ru_RU', null);
 
   runApp(
@@ -100,24 +97,16 @@ class Stage2Screen extends StatelessWidget {
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 const SizedBox(height: 16),
+                Text('Тема: ${settings.themeMode.name}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Text('Активных: ${trades.active.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Text('Наблюдаю: ${trades.watched.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Text('История: ${trades.history.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
                 Text(
-                  'Тема: ${settings.themeMode.name}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                Text(
-                  'Активных: ${trades.active.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                Text(
-                  'Наблюдаю: ${trades.watched.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                Text(
-                  'История: ${trades.history.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                Text(
-                  'Курс USD/RUB: ${settings.usdRubRate?.toStringAsFixed(2) ?? "—"}',
+                  'Курс: ${settings.usdRubRate?.toStringAsFixed(2) ?? "—"}',
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ],
