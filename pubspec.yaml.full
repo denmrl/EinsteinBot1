@@ -1,0 +1,52 @@
+name: einstein_app
+description: "Эйнштейн — торговый и аналитический терминал для Bybit (build 1791539421)."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ---------- UI / локализация ----------
+  cupertino_icons: ^1.0.8
+  intl: ^0.19.0
+
+  # ---------- Управление состоянием ----------
+  provider: ^6.1.2
+
+  # ---------- Локальная база данных ----------
+  hive_ce: ^2.1.0
+  hive_ce_flutter: ^2.1.0
+  path_provider: ^2.1.4
+
+  # ---------- Безопасное хранение секретов ----------
+  flutter_secure_storage: ^9.2.2
+
+  # ---------- Лёгкие настройки ----------
+  shared_preferences: ^2.3.2
+
+  # ---------- Сеть ----------
+  dio: ^5.7.0
+  crypto: ^3.0.6
+
+  # ---------- Фоновый сервис ----------
+  flutter_foreground_task: ^8.17.0
+  flutter_local_notifications: ^17.2.4
+  permission_handler: ^11.3.1
+
+  # ---------- Утилиты ----------
+  timezone: ^0.9.4
+  logger: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
