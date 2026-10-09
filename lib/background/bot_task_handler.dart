@@ -27,7 +27,7 @@ class EinsteinTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    _log.i('FGS изолят запущен ($starter)');
+    _log.i('FGS запущен ($starter)');
     try {
       final dir = await getApplicationDocumentsDirectory();
       Hive.init(dir.path);
@@ -62,7 +62,7 @@ class EinsteinTaskHandler extends TaskHandler {
 
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
-    _log.i('FGS останавливается...');
+    _log.i('FGS останавливается');
     _uiTimer?.cancel();
     _uiTimer = null;
     if (_started) {
@@ -75,7 +75,7 @@ class EinsteinTaskHandler extends TaskHandler {
 
   @override
   void onReceiveData(Object data) {
-    _log.i('FGS -> UI: $data');
+    _log.i('FGS to UI: $data');
   }
 
   @override
