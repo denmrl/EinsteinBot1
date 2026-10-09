@@ -97,7 +97,7 @@ jobs:
           android {
               namespace = "com.einstein.app"
               compileSdk = 35
-              ndkVersion = "28.0.12433566" // 🚀 Современный NDK для Android 15
+              ndkVersion = "27.2.12479018" // 🚀 Современный NDK для Android 15
 
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -135,7 +135,7 @@ jobs:
       - name: Accept Android SDK licenses
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager --install "ndk;28.0.12433566" || true
+          sdkmanager --install "ndk;27.2.12479018" || true
 
       - name: Build universal APK
         run: flutter build apk --release
