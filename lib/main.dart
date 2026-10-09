@@ -12,6 +12,7 @@ import 'core/providers/bot_status_provider.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/trades_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'presentation/screens/home_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,7 +80,7 @@ class TestApp extends StatelessWidget {
       themeMode: settings.themeMode,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
-      home: const Stage2Screen(),
+      home: const HomeShell(),
     );
   }
 }
