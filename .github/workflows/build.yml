@@ -132,6 +132,11 @@ jobs:
       - name: Upgrade Gradle wrapper to 8.7
         run: sed -i 's/gradle-8.4-all.zip/gradle-8.7-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "ndk;28.0.12433566" || true
+
       - name: Build universal APK
         run: flutter build apk --release
 
