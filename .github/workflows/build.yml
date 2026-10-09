@@ -29,20 +29,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 1) Пересоздаём android-папку с правильным именем проекта
       - name: Regenerate Android folder (fix v1 embedding)
         run: |
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
-      # 2) ПОЛНАЯ ПЕРЕЗАПИСЬ gradle-файлов — версии Kotlin 1.9.20 и AGP 8.3.2 жёстко зашиты
-      - name: Overwrite gradle files (Kotlin 1.9.20 + AGP 8.3.2)
+      - name: Overwrite settings.gradle and build.gradle
         run: |
           rm -f android/settings.gradle
           rm -f android/settings.gradle.kts
           rm -f android/build.gradle
           rm -f android/build.gradle.kts
-          
+
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
@@ -66,7 +64,7 @@ jobs:
           }
           include ":app"
           EOF
-          
+
           cat > android/build.gradle << 'EOF'
           allprojects {
               repositories {
@@ -86,18 +84,76 @@ jobs:
           }
           EOF
 
-      # 3) Обновляем версию Gradle с 7.6.3 до 8.4 в сгенерированной папке
-      - name: Upgrade Gradle Wrapper distribution version to 8.4
+      - name: Patch app/build.gradle (desugaring + NDK 25 + minSdk 23)
         run: |
-          sed -i 's/gradle-7.6.3-all.zip/gradle-8.4-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
+          cat > android/app/build.gradle << 'EOF'
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
 
-      # 4) 🛠️ ФИНАЛЬНЫЙ ФИКС DART КОДА: исправление опечаток в именах переменных и типах данных
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file("local.properties")
+          if (localPropertiesFile.exists()) {
+              localPropertiesFile.withReader("UTF-8") { reader ->
+                  localProperties.load(reader)
+              }
+          }
+
+          def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+          def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
+
+          android {
+              namespace = "com.einstein.app"
+              compileSdk = 34
+              ndkVersion = "25.1.8937393"
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_1_8
+                  targetCompatibility = JavaVersion.VERSION_1_8
+                  coreLibraryDesugaringEnabled true
+              }
+
+              kotlinOptions {
+                  jvmTarget = JavaVersion.VERSION_1_8
+              }
+
+              defaultConfig {
+                  applicationId = "com.einstein.app"
+                  minSdk = 23
+                  targetSdk = 34
+                  versionCode = flutterVersionCode.toInteger()
+                  versionName = flutterVersionName
+                  multiDexEnabled true
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.debug
+                  }
+              }
+          }
+
+          flutter {
+              source = "../.."
+          }
+
+          dependencies {
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+          }
+          EOF
+
+      - name: Upgrade Gradle Wrapper to 8.4
+        run: |
+          sed -i 's/gradle-7.6.3-all.zip/gradle-8.4-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
-      # 6) Выкладываем готовые файлы
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: einstein-release-apk
-          path: build/app/outputs/apk/release/*.apk
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
