@@ -92,41 +92,6 @@ jobs:
           sed -i 's/gradle-7.6.3-all.zip/gradle-8.4-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
 
       # 4) 🛠️ ФИНАЛЬНЫЙ ФИКС DART КОДА: исправление опечаток в именах переменных и типах данных
-      - name: Auto-fix Dart code compatibility for Flutter 3.24.0
-        run: |
-          echo "=== Исправляем несовместимые с 3.24.0 методы и опечатки ==="
-          
-          # 1. Заменяем остатки методов .withValues на классический .withAlpha
-          find lib/ -type f -name "*.dart" -exec sed -i -E 's/\.withValues\(alpha:[[:space:]]*([0-9.]+)\)/.withAlpha((\1 * 255).toInt())/g' {} +
-          find lib/ -type f -name "*.dart" -exec sed -i -E 's/\.withValues\(alpha:[[:space:]]*([a-zA-Z0-9._]+)\)/.withAlpha((\1 * 255).toInt())/g' {} +
-          
-          # 2. Исправляем опечатки DeepSeek в searcher_engine.dart (заменяем cl5 на candles и подключаем Candle)
-          if [ -f lib/domain/searcher_engine.dart ]; then
-            sed -i '1i import "../data/models/candle.dart";' lib/domain/searcher_engine.dart
-            sed -i 's/c15\.map/candles.map/g' lib/domain/searcher_engine.dart || true
-            sed -i 's/cl5\.map/candles.map/g' lib/domain/searcher_engine.dart || true
-            sed -i 's/final closes15 = .*/final List<double> closes15 = candles.map((c) => c.close).toList();/g' lib/domain/searcher_engine.dart || true
-            sed -i 's/final volumes15 = .*/final List<double> volumes15 = candles.map((c) => c.volume).toList();/g' lib/domain/searcher_engine.dart || true
-          fi
-          
-          # 3. Добавляем импорт уведомлений и лечим метод onDestroy в bot_task_handler.dart и foreground_service.dart
-          if [ -f lib/background/bot_task_handler.dart ]; then
-            sed -i '1i import "package:firebase_core/firebase_core.dart";\nimport "package:firebase_messaging/firebase_messaging.dart";' lib/background/bot_task_handler.dart || true
-            sed -i 's/void onDestroy/void onDestroy(DateTime timestamp)/g' lib/background/bot_task_handler.dart || true
-            sed -i 's/Future<void> onDestroy(DateTime timestamp, bool isTimeout) async/Future<void> onDestroy(DateTime timestamp) async/g' lib/background/bot_task_handler.dart || true
-          fi
-          
-          # 4. Инициализируем переменную _lastCallMs в rate_limiter.dart
-          if [ -f lib/core/utils/rate_limiter.dart ]; then
-            sed -i 's/int _lastCallMs;/int _lastCallMs = 0;/g' lib/core/utils/rate_limiter.dart || true
-          fi
-          
-          # 5. Убираем ошибочное ключевое слово finally из объявлений полей в settings_provider.dart
-          if [ -f lib/core/providers/settings_provider.dart ]; then
-            sed -i 's/} finally {/}/g' lib/core/providers/settings_provider.dart || true
-          fi
-
-      # 5) Сборка APK
       - name: Build APK Release
         run: flutter build apk --release --split-per-abi
 
