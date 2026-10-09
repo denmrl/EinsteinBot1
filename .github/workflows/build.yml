@@ -95,7 +95,7 @@ jobs:
           def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
 
           android {
-              namespace = "com.einstein.app"
+              namespace = "com.example.einstein_app"
               compileSdk = 35
               ndkVersion = "27.2.12479018" // 🚀 Современный NDK для Android 15
 
