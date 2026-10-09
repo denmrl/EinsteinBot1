@@ -14,7 +14,6 @@ import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -32,7 +31,6 @@ Future<void> main() async {
 
   tz_data.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
-
   await initializeDateFormatting('ru_RU', null);
 
   runApp(
@@ -83,19 +81,12 @@ class Stage2Screen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'ЭТАП 2 ОК',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('ЭТАП 2 ОК',
+                    style: TextStyle(color: Colors.white, fontSize: 32,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
-                const Text(
-                  'Hive + Provider работают',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+                const Text('Hive + Provider работают',
+                    style: TextStyle(color: Colors.white, fontSize: 16)),
                 const SizedBox(height: 16),
                 Text('Тема: ${settings.themeMode.name}',
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
@@ -105,10 +96,8 @@ class Stage2Screen extends StatelessWidget {
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
                 Text('История: ${trades.history.length}',
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
-                Text(
-                  'Курс: ${settings.usdRubRate?.toStringAsFixed(2) ?? "—"}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
+                Text('Курс: ${settings.usdRubRate?.toStringAsFixed(2) ?? "—"}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
               ],
             ),
           ),
