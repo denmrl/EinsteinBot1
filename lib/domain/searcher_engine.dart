@@ -1,8 +1,3 @@
-// ==========================================================
-//  ЭЙНШТЕЙН — Движок сканера
-//  Файл: lib/domain/searcher_engine.dart
-// ==========================================================
-
 import 'dart:async';
 
 import 'package:logger/logger.dart';
@@ -37,7 +32,7 @@ class SearcherEngine {
 
   void start() {
     if (_timer != null) return;
-    _log.i('🔍 SearcherEngine запущен');
+    _log.i('SearcherEngine запущен');
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _tick());
     _tick();
   }
@@ -45,7 +40,7 @@ class SearcherEngine {
   void stop() {
     _timer?.cancel();
     _timer = null;
-    _log.i('⏹ SearcherEngine остановлен');
+    _log.i('SearcherEngine остановлен');
   }
 
   Future<void> _tick() async {
@@ -54,7 +49,7 @@ class SearcherEngine {
     try {
       await _runScan();
     } catch (e, st) {
-      _log.e('⚠️ Ошибка сканера: $e', error: e, stackTrace: st);
+      _log.e('Ошибка сканера: $e', error: e, stackTrace: st);
     } finally {
       _running = false;
     }
@@ -109,9 +104,6 @@ class SearcherEngine {
     }
   }
 
-  // ==========================================================
-  // 👁 ПРОВЕРКА НАБЛЮДАЕМОЙ МОНЕТЫ
-  // ==========================================================
   Future<void> _checkWatched(WatchedSetup w) async {
     final sym = w.symbol;
     final c5 = await _fetchKline(sym, '5');
@@ -125,14 +117,12 @@ class SearcherEngine {
     if (Indicators.isStrongHistoricalLowBreakout(check1h, w.historicalLow)) {
       await _trades.removeWatchedTrade(sym);
       await _notif.signal(
-        title: '❌ Отмена: $sym',
+        title: 'Отмена: $sym',
         body: 'Пробой исторического дна на 1H',
       );
-      _log.i('❌ $sym снят с наблюдения (пробой дна)');
       return;
     }
 
-    // ✅ Используем c15.
     final closes15 = c15.map((c) => c.close).toList();
     final ema9 = Indicators.ema(closes15, AppConstants.EMA_FAST).last;
     final ema20 = Indicators.ema(closes15, AppConstants.EMA_SLOW).last;
@@ -166,12 +156,8 @@ class SearcherEngine {
       stopLoss: stopLoss,
       patternName: w.patternName,
     );
-    _log.i('🌱 $sym подтверждён → вход по ${w.patternName}');
   }
 
-  // ==========================================================
-  // 🔎 СКАН НОВОГО КАНДИДАТА
-  // ==========================================================
   Future<void> _scanNewCandidate(String symbol, double lastPrice) async {
     final c1d = await _fetchKline(symbol, 'D');
     final c1h = await _fetchKline(symbol, '60');
@@ -199,18 +185,14 @@ class SearcherEngine {
     await _trades.saveWatchedSetup(setup);
 
     await _notif.signal(
-      title: '👀 Наблюдение: $symbol',
+      title: 'Наблюдение: $symbol',
       body: '${pat.name}\n'
           'Цена: ${Formatters.price(lastPrice)} | '
           'Триггер: ${Formatters.price(trigP)}\n'
           '${macro.reason}',
     );
-    _log.i('👀 $symbol → наблюдение "${pat.name}"');
   }
 
-  // ==========================================================
-  // 🛠 ВНУТРЕННИЕ
-  // ==========================================================
   Future<List<Candle>> _fetchKline(String symbol, String interval) async {
     final cached = _cache.get(symbol, interval);
     if (cached != null) return cached;

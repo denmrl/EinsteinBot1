@@ -1,10 +1,4 @@
-// ==========================================================
-//  ЭЙНШТЕЙН — Провайдер настроек и баланса
-//  Файл: lib/core/providers/settings_provider.dart
-// ==========================================================
-
 import 'package:flutter/material.dart';
-
 import '../../data/repositories/balance_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 
@@ -22,26 +16,19 @@ class SettingsProvider extends ChangeNotifier {
   double _paperBalance = 0.0;
   bool _hasKeys = false;
 
-  // ---------- Геттеры ----------
   BotSettings get settings => _settings;
   ThemeMode get themeMode => _settings.themeMode;
   TradingMode get tradingMode => _settings.tradingMode;
   BybitEnvironment get environment => _settings.environment;
-
   bool get isLoading => _loading;
   double get paperBalanceUsdt => _paperBalance;
   double? get usdRubRate => _usdRubRate;
   bool get hasBybitCredentials => _hasKeys;
-
   double get paperBalanceRub =>
       _usdRubRate == null ? 0.0 : _paperBalance * _usdRubRate!;
-
   double? get balanceInRub =>
       _usdRubRate == null ? null : _paperBalance * _usdRubRate!;
 
-  // ==========================================================
-  // 🚀 ИНИЦИАЛИЗАЦИЯ
-  // ==========================================================
   Future<void> _init() async {
     await reload();
   }
@@ -49,23 +36,19 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> reload() async {
     _loading = true;
     notifyListeners();
-
     try {
       _settings = await _repo.load();
       _hasKeys = await _repo.hasBybitCredentials();
       _paperBalance = _balance.getPaperBalance();
       _usdRubRate = await _balance.getUsdRubRate();
     } catch (e) {
-      debugPrint('⚠ SettingsProvider.reload error: $e');
+      debugPrint('SettingsProvider.reload error: $e');
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
-  // ==========================================================
-  // 🎨 ТЕМА / РЕЖИМ
-  // ==========================================================
   Future<void> setThemeMode(ThemeMode mode) async {
     _settings = _settings.copyWith(themeMode: mode);
     notifyListeners();
@@ -84,18 +67,12 @@ class SettingsProvider extends ChangeNotifier {
     await _repo.save(_settings);
   }
 
-  // ==========================================================
-  // ⚙️ ФИЛЬТРЫ
-  // ==========================================================
   Future<void> updateSettings(BotSettings updated) async {
     _settings = updated;
     notifyListeners();
     await _repo.save(_settings);
   }
 
-  // ==========================================================
-  // 🔐 API-КЛЮЧИ
-  // ==========================================================
   Future<void> saveBybitKeys({
     required String apiKey,
     required String apiSecret,
@@ -114,18 +91,12 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==========================================================
-  // 💱 КУРС USD/RUB
-  // ==========================================================
   Future<void> refreshUsdRub() async {
     final rate = await _balance.getUsdRubRate(forceRefresh: true);
     _usdRubRate = rate;
     notifyListeners();
   }
 
-  // ==========================================================
-  // 💰 ДЕМО-БАЛАНС
-  // ==========================================================
   void refreshBalance() {
     _paperBalance = _balance.getPaperBalance();
     notifyListeners();

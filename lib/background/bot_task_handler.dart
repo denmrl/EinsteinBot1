@@ -1,9 +1,3 @@
-// ==========================================================
-//  ЭЙНШТЕЙН — Точка входа изолята Foreground Service
-//  Файл: lib/background/bot_task_handler.dart
-//  Без Firebase. Совместимо с flutter_foreground_task 8.17.0.
-// ==========================================================
-
 import 'dart:async';
 import 'dart:ui';
 
@@ -33,8 +27,7 @@ class EinsteinTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    _log.i('🔧 Foreground Service изолят запущен ($starter)');
-
+    _log.i('FGS изолят запущен ($starter)');
     try {
       final dir = await getApplicationDocumentsDirectory();
       Hive.init(dir.path);
@@ -63,16 +56,15 @@ class EinsteinTaskHandler extends TaskHandler {
       );
       await _refreshNotification();
     } catch (e, st) {
-      _log.e('❌ Ошибка старта FGS: $e', error: e, stackTrace: st);
+      _log.e('Ошибка старта FGS: $e', error: e, stackTrace: st);
     }
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
-    _log.i('⏹ Foreground Service останавливается…');
+    _log.i('FGS останавливается...');
     _uiTimer?.cancel();
     _uiTimer = null;
-
     if (_started) {
       SearcherEngine.instance.stop();
       ExitMonitorEngine.instance.stop();
@@ -81,10 +73,9 @@ class EinsteinTaskHandler extends TaskHandler {
     _started = false;
   }
 
-  // 8.17.0: параметр Object (не RemoteMessage).
   @override
   void onReceiveData(Object data) {
-    _log.i('📩 FGS → UI: $data');
+    _log.i('FGS -> UI: $data');
   }
 
   @override
@@ -108,7 +99,7 @@ class EinsteinTaskHandler extends TaskHandler {
         '${_nowMskStr()} МСК';
 
     await FlutterForegroundTask.updateService(
-      notificationTitle: 'Эйнштейн — бот работает',
+      notificationTitle: 'Эйнштейн - бот работает',
       notificationText: text,
     );
   }
