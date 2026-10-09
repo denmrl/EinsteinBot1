@@ -1,5 +1,5 @@
 name: einstein_app
-description: "Эйнштейн — торговый и аналитический терминал для Bybit (Paper + Real)."
+description: "Эйнштейн — торговый и аналитический терминал для Bybit (build 1791539421)."
 publish_to: 'none'
 
 version: 1.0.0+1
