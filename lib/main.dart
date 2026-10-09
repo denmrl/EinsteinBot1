@@ -1,7 +1,4 @@
-// ==========================================================
-//  ЭЙНШТЕЙН — Точка входа
-//  Файл: lib/main.dart
-// ==========================================================
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,20 +17,54 @@ import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/home_shell.dart';
 
+/// Если что-то падает в main — здесь будет текст ошибки.
+String? _fatalError;
+String? _fatalStack;
+
 Future<void> main() async {
+  // Ловим все ошибки до runApp.
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    originalOnError?.call(details);
+    _fatalError ??= details.exceptionAsString();
+    _fatalStack ??= details.stack?.toString();
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Красивый показ ошибок в виджетах.
+  ErrorWidget.builder = (details) {
+    return Container(
+      color: const Color(0xFF7F1D1D),
+      padding: const EdgeInsets.all(12),
+      child: SingleChildScrollView(
+        child: Text(
+          'ОШИБКА ВИДЖЕТА:\n\n${details.exception}\n\n${details.stack}',
+          style: const TextStyle(color: Colors.white, fontSize: 11),
+        ),
+      ),
+    );
+  };
 
-  await _initHive();
-  await _initTimezone();
-  await _initLocalization();
-  await NotificationService.instance.init();
-  _initForegroundTask();
+  // Пробуем всё по шагам, каждую ошибку перехватываем.
+  await _step('SetOrientation', () async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  });
 
+  await _step('Hive', _initHive);
+  await _step('Timezone', _initTimezone);
+  await _step('Localization', _initLocalization);
+  await _step('Notifications', () async {
+    await NotificationService.instance.init();
+  });
+  await _step('ForegroundTask', () async {
+    _initForegroundTask();
+  });
+
+  // Запускаем приложение.
   runApp(
     MultiProvider(
       providers: [
@@ -41,9 +72,24 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => TradesProvider()),
         ChangeNotifierProvider(create: (_) => BotStatusProvider()),
       ],
-      child: const EinsteinApp(),
+      child: _fatalError == null
+          ? const EinsteinApp()
+          : FatalErrorScreen(error: _fatalError!, stack: _fatalStack ?? ''),
     ),
   );
+}
+
+/// Обёртка: если шаг упал — сохраняем текст ошибки и не продолжаем.
+Future<void> _step(String name, Future<void> Function() action) async {
+  if (_fatalError != null) return;
+  try {
+    await action();
+    debugPrint('✅ $name OK');
+  } catch (e, st) {
+    _fatalError = '[$name] $e';
+    _fatalStack = st.toString();
+    debugPrint('❌ $name FAILED: $e');
+  }
 }
 
 Future<void> _initHive() async {
@@ -56,21 +102,17 @@ Future<void> _initHive() async {
     Hive.openBox(AppConstants.BOX_BALANCE_HISTORY),
     Hive.openBox(AppConstants.BOX_EVENT_LOG),
   ]);
-  debugPrint('✅ [Hive] Все боксы открыты');
 }
 
 Future<void> _initTimezone() async {
   tz_data.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
-  debugPrint('✅ [TZ] ${tz.local.name}');
 }
 
 Future<void> _initLocalization() async {
   await initializeDateFormatting('ru_RU', null);
-  debugPrint('✅ [i18n] ru_RU загружено');
 }
 
-// 8.17.0: без serviceTypes, без NotificationIconData.
 void _initForegroundTask() {
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
@@ -89,7 +131,6 @@ void _initForegroundTask() {
       allowWifiLock: true,
     ),
   );
-  debugPrint('✅ [FGS] Foreground Task инициализирован');
 }
 
 class EinsteinApp extends StatelessWidget {
@@ -108,6 +149,85 @@ class EinsteinApp extends StatelessWidget {
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
       home: const HomeShell(),
+    );
+  }
+}
+
+/// Экран, который покажет ошибку краша — большой, читаемый.
+class FatalErrorScreen extends StatelessWidget {
+  final String error;
+  final String stack;
+  const FatalErrorScreen({super.key, required this.error, required this.stack});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF1A0000),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '⚠️ ОШИБКА ЗАПУСКА',
+                  style: TextStyle(
+                    color: Color(0xFFFF6B6B),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Скопируй текст ниже и пришли в чат:',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    error,
+                    style: const TextStyle(
+                      color: Color(0xFFFF8A8A),
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Стек:',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    stack,
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
