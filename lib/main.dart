@@ -35,7 +35,6 @@ Future<void> main() async {
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
   await initializeDateFormatting('ru_RU', null);
 
-  // 🚀 ЭТАП 3: инициализация Foreground Task
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
       channelId: AppConstants.NOTIF_CHANNEL_SERVICE_ID,
@@ -71,59 +70,23 @@ class TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
+    // ВРЕМЕННО: жёстко тёмная тема, чтобы диагностировать серый экран.
     return MaterialApp(
       title: 'Эйнштейн',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       darkTheme: AppTheme.dark(),
-      themeMode: settings.themeMode,
+      themeMode: ThemeMode.dark,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
+      builder: (context, child) {
+        // Жёстко тёмный фон на всё приложение — исключаем серый.
+        return ColoredBox(
+          color: const Color(0xFF0E1116),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const HomeShell(),
-    );
-  }
-}
-
-class Stage2Screen extends StatelessWidget {
-  const Stage2Screen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final trades = context.watch<TradesProvider>();
-
-    return Scaffold(
-      backgroundColor: Colors.indigo,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('ЭТАП 3 ОК',
-                    style: TextStyle(color: Colors.white, fontSize: 32,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 24),
-                const Text('FGS init без краша',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
-                const SizedBox(height: 16),
-                Text('Тема: ${settings.themeMode.name}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                Text('Активных: ${trades.active.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                Text('Наблюдаю: ${trades.watched.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                Text('История: ${trades.history.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                Text('Курс: ${settings.usdRubRate?.toStringAsFixed(2) ?? "—"}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
