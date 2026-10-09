@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -32,6 +33,25 @@ Future<void> main() async {
   tz_data.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation(AppConstants.TIMEZONE_MSK));
   await initializeDateFormatting('ru_RU', null);
+
+  // 🚀 ЭТАП 3: инициализация Foreground Task
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: AppConstants.NOTIF_CHANNEL_SERVICE_ID,
+      channelName: AppConstants.NOTIF_CHANNEL_SERVICE_NAME,
+      channelDescription: AppConstants.NOTIF_CHANNEL_SERVICE_DESC,
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.nothing(),
+      autoRunOnBoot: false,
+      autoRunOnMyPackageReplaced: false,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
 
   runApp(
     MultiProvider(
@@ -81,11 +101,11 @@ class Stage2Screen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('ЭТАП 2 ОК',
+                const Text('ЭТАП 3 ОК',
                     style: TextStyle(color: Colors.white, fontSize: 32,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
-                const Text('Hive + Provider работают',
+                const Text('FGS init без краша',
                     style: TextStyle(color: Colors.white, fontSize: 16)),
                 const SizedBox(height: 16),
                 Text('Тема: ${settings.themeMode.name}',
