@@ -14,6 +14,7 @@ import 'core/providers/settings_provider.dart';
 import 'core/providers/trades_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/trades_screen.dart';
+import 'presentation/screens/home_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,7 +121,7 @@ class EinsteinApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const TradesScreen(),
+      home: const HomeShell(),
     );
   }
 }
