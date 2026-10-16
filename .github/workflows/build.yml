@@ -137,6 +137,48 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager --install "ndk;27.2.12479018" || true
 
+      - name: Override splash styles (dark background)
+        run: |
+          cat > android/app/src/main/res/values/styles.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">@drawable/launch_background</item>
+                  <item name="android:windowSplashScreenBackground">#0E1116</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+                  <item name="android:windowSplashScreenIconBackgroundColor">#0E1116</item>
+              </style>
+              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">#0E1116</item>
+                  <item name="android:windowLightStatusBar">false</item>
+              </style>
+          </resources>
+          EOF
+
+          mkdir -p android/app/src/main/res/values-v31
+          cat > android/app/src/main/res/values-v31/styles.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowSplashScreenBackground">#0E1116</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+                  <item name="android:windowSplashScreenIconBackgroundColor">#0E1116</item>
+                  <item name="android:postSplashScreenTheme">@style/NormalTheme</item>
+              </style>
+              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">#0E1116</item>
+                  <item name="android:windowLightStatusBar">false</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > android/app/src/main/res/drawable/launch_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="#0E1116" />
+          </layer-list>
+          EOF
+
       - name: Build universal APK
         run: flutter build apk --release
 
