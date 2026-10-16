@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/repositories/balance_repository.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/sources/bybit_api.dart';
 
 class SettingsProvider extends ChangeNotifier {
   SettingsProvider() {
@@ -39,6 +40,16 @@ class SettingsProvider extends ChangeNotifier {
     try {
       _settings = await _repo.load();
       _hasKeys = await _repo.hasBybitCredentials();
+      if (_hasKeys) {
+        final creds = await _repo.loadBybitCredentials();
+        if (creds != null) {
+          BybitApi.instance.setCredentials(
+            apiKey: creds.apiKey,
+            apiSecret: creds.apiSecret,
+          );
+          debugPrint('🔐 Ключи Bybit загружены при старте');
+        }
+      }
       _paperBalance = _balance.getPaperBalance();
       _usdRubRate = await _balance.getUsdRubRate();
     } catch (e) {

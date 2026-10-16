@@ -108,7 +108,7 @@ class BybitApi {
       await RateLimiter.instance.wait();
       try {
         Map<String, String>? headers;
-        if (isPrivate) {
+        if (isPrivate || hasCredentials) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           if (method == 'GET') {
             headers = _signHeaders(
