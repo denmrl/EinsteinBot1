@@ -13,6 +13,7 @@ import 'core/providers/settings_provider.dart';
 import 'core/providers/trades_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/home_shell.dart';
+import 'presentation/screens/trades_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,24 +87,8 @@ class EinsteinApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const _RedTest(),
+      home: const TradesScreen(),
     );
   }
 }
 
-class _RedTest extends StatelessWidget {
-  const _RedTest();
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFFF0000), // ЧИСТЫЙ КРАСНЫЙ
-      body: Center(
-        child: Text(
-          'ЭТАП 6: КРАСНЫЙ',
-          style: TextStyle(color: Colors.white, fontSize: 30,
-              fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-}
