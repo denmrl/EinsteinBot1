@@ -12,11 +12,46 @@ import 'core/providers/bot_status_provider.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/trades_provider.dart';
 import 'core/theme/app_theme.dart';
-import 'presentation/screens/home_shell.dart';
 import 'presentation/screens/trades_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🚨 ЛОВУШКА ОШИБОК: если что-то падает в build — покажем на экране.
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Container(
+      color: Colors.red.shade900,
+      padding: const EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '⚠️ ОШИБКА В UI',
+              style: TextStyle(color: Colors.white, fontSize: 20,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              '${details.exception}',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              '${details.stack}',
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  };
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('🚨 FLUTTER ERROR: ${details.exception}');
+    debugPrint('🚨 STACK: ${details.stack}');
+  };
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -71,7 +106,6 @@ class EinsteinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ФОРСИРУЕМ тёмную тему — не читаем из провайдера, чтобы исключить баг.
     return MaterialApp(
       title: 'Эйнштейн',
       debugShowCheckedModeBanner: false,
@@ -80,15 +114,7 @@ class EinsteinApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
-      builder: (context, child) {
-        // Жёстко тёмный фон на всё приложение — исключаем серый splash.
-        return ColoredBox(
-          color: const Color(0xFF0E1116),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
       home: const TradesScreen(),
     );
   }
 }
-
