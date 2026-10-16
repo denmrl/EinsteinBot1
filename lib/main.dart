@@ -86,7 +86,24 @@ class EinsteinApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const HomeShell(),
+      home: const _RedTest(),
+    );
+  }
+}
+
+class _RedTest extends StatelessWidget {
+  const _RedTest();
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFFFF0000), // ЧИСТЫЙ КРАСНЫЙ
+      body: Center(
+        child: Text(
+          'ЭТАП 6: КРАСНЫЙ',
+          style: TextStyle(color: Colors.white, fontSize: 30,
+              fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 }
