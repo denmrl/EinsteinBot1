@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -114,6 +115,11 @@ class EinsteinApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const TradesScreen(),
     );
   }
