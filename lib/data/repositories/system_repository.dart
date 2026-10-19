@@ -19,7 +19,7 @@ class SystemRepository {
     final logEntry = '[$timeStr] $action';
     
     history.add(logEntry);
-    if (history.length > 20) history.removeAt(0);
+    if (history.length > 50) history.removeAt(0);
     await prefs.setStringList('action_history', history);
   }
 

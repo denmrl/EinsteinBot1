@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/trades_provider.dart';
+import 'log_screen.dart';
 import '../../core/providers/system_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
@@ -34,7 +35,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       backgroundColor: AppColors.darkBg,
       appBar: AppBar(
         title: const Text('Статистика'),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: () async { await settings.refreshUsdRub(); _reloadHistory(); })],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.terminal),
+            tooltip: 'Полный лог',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogScreen())),
+          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () async { await settings.refreshUsdRub(); _reloadHistory(); }),
+        ],
       ),
       body: RefreshIndicator(
         color: AppColors.accentGreen, backgroundColor: AppColors.darkSurface,
