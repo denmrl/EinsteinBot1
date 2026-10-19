@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:logger/logger.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/services/notification_service.dart';
@@ -89,7 +90,7 @@ class SearcherEngine {
     final watched = _trades.loadWatchedSetups();
     for (final w in watched) {
       if (activeSymbols.contains(w.symbol)) continue;
-      SystemRepository.instance.updateAction('Проверка наблюдения: \$w.symbol');
+      _updateAction('Проверка наблюдения: \$w.symbol');
       await _checkWatched(w);
     }
 
@@ -102,11 +103,11 @@ class SearcherEngine {
       if (activeSymbols.contains(sym) || watchedSymbols.contains(sym)) {
         continue;
       }
-      SystemRepository.instance.updateAction('Анализ сетапа: \$sym');
+      _updateAction('Анализ сетапа: \$sym');
       await _scanNewCandidate(sym, _d(t['lastPrice']));
       await Future.delayed(const Duration(milliseconds: 200));
     }
-    SystemRepository.instance.updateAction('Цикл завершен. Отдых 30 сек...');
+    _updateAction('Цикл завершен. Отдых 30 сек...');
   }
 
   Future<void> _checkWatched(WatchedSetup w) async {
@@ -238,4 +239,12 @@ class SearcherEngine {
   }
 
   String _two(int v) => v.toString().padLeft(2, '0');
+
+  Future<void> _updateAction(String action) async {
+    await SystemRepository.instance.updateAction(action);
+    try {
+      FlutterForegroundTask.sendDataToMain({'action': action});
+    } catch (_) {}
+  }
+
 }
