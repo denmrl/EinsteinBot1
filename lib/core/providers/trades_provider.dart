@@ -9,6 +9,7 @@
 //  Автоматически перерисовывает UI при любом изменении Hive.
 // ==========================================================
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/models/active_trade.dart';
@@ -20,6 +21,11 @@ class TradesProvider extends ChangeNotifier {
   TradesProvider() {
     _repo = TradesRepository();
     _attachListeners();
+    FlutterForegroundTask.addTaskDataCallback((data) {
+      if (data is Map && data['refresh_trades'] == true) {
+        refresh();
+      }
+    });
     _reload();
   }
   late final TradesRepository _repo;

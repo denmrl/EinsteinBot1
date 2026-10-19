@@ -209,6 +209,7 @@ class SearcherEngine {
       macroReason: macro.reason,
     );
     await _trades.saveWatchedSetup(setup);
+    FlutterForegroundTask.sendDataToMain({'refresh_trades': true});
 
     await _notif.signal(
       title: 'Наблюдение: $symbol',

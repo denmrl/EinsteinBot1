@@ -149,10 +149,19 @@ class BybitApi {
         );
 
         final data = response.data;
-        if (data is! Map) throw BybitApiException('Неверный формат ответа: $data');
+        if (data is! Map) {
+          sw.stop();
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Не Map. Ответ: ${data.toString().substring(0, min(50, data.toString().length))}...');
+          throw BybitApiException('Неверный формат ответа');
+        }
         final map = Map<String, dynamic>.from(data);
 
         final retCode = map['retCode'];
+        if (retCode == null) {
+          sw.stop();
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Пустой JSON: ${map.toString()}');
+          throw BybitApiException('Нет retCode в ответе');
+        }
         if (retCode == null) {
           sw.stop();
           SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Нет retCode. Ответ: ${map.toString()}');
