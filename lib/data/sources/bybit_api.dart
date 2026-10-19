@@ -53,6 +53,7 @@ class BybitApi {
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
       validateStatus: (status) => status != null && status < 600,
+      persistentConnection: false,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -66,6 +67,8 @@ class BybitApi {
         final client = HttpClient();
         client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
         client.connectionTimeout = const Duration(seconds: 30);
+        // Форсируем IPv4 и отключаем HTTP/2 (частая причина таймаутов на Android)
+        client.findProxy = (uri) => 'DIRECT';
         return client;
       },
     );
@@ -128,7 +131,7 @@ class BybitApi {
 
       try {
         Map<String, String>? headers;
-        if (isPrivate) {
+        if (isPrivate || hasCredentials) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           if (method == 'GET') {
             headers = _signHeaders(timestamp: timestamp, queryString: query != null ? _encodeQuery(query) : null);
