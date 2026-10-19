@@ -18,16 +18,15 @@ class SystemProvider extends ChangeNotifier {
       }
     });
 
-    // 2. Каждые 2 секунды принудительно перечитываем Hive (для графиков и логов)
+    // 2. Каждые 2 секунды обновляем UI (для графиков и логов)
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _pollHive());
   }
 
-  void _pollHive() async {
+  void _pollHive() {
     try {
       final box = Hive.box('system_metrics');
-      await box.reload(); // Принудительно читаем с диска
-      
       final action = box.get('current_action', defaultValue: 'Ожидание...');
+      
       if (action != _liveAction) {
         _liveAction = action;
       }
