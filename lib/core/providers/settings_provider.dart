@@ -25,10 +25,8 @@ class SettingsProvider extends ChangeNotifier {
   double get paperBalanceUsdt => _paperBalance;
   double? get usdRubRate => _usdRubRate;
   bool get hasBybitCredentials => _hasKeys;
-  double get paperBalanceRub =>
-      _usdRubRate == null ? 0.0 : _paperBalance * _usdRubRate!;
-  double? get balanceInRub =>
-      _usdRubRate == null ? null : _paperBalance * _usdRubRate!;
+  double get paperBalanceRub => _usdRubRate == null ? 0.0 : _paperBalance * _usdRubRate!;
+  double? get balanceInRub => _usdRubRate == null ? null : _paperBalance * _usdRubRate!;
 
   Future<void> _init() async {
     await reload();
@@ -47,7 +45,6 @@ class SettingsProvider extends ChangeNotifier {
             apiKey: creds.apiKey,
             apiSecret: creds.apiSecret,
           );
-          debugPrint('🔐 Ключи Bybit загружены при старте');
         }
       }
       _paperBalance = _balance.getPaperBalance();
@@ -116,6 +113,31 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> resetPaperAccount() async {
     await _balance.resetPaperAccount();
     _paperBalance = _balance.getPaperBalance();
+    notifyListeners();
+  }
+
+  // ==========================================================
+  // 📁 УПРАВЛЕНИЕ ПРОФИЛЯМИ (СТРАТЕГИЯМИ)
+  // ==========================================================
+  
+  List<String> get profileNames => _repo.getProfileNames();
+
+  Future<void> saveCurrentAsProfile(String name) async {
+    await _repo.saveProfile(name, _settings);
+    notifyListeners();
+  }
+
+  Future<void> applyProfile(String name) async {
+    final profile = _repo.loadProfile(name);
+    if (profile != null) {
+      _settings = profile;
+      notifyListeners();
+      await _repo.save(_settings);
+    }
+  }
+
+  Future<void> deleteProfile(String name) async {
+    await _repo.deleteProfile(name);
     notifyListeners();
   }
 }
