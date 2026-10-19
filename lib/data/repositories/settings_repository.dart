@@ -27,11 +27,11 @@ class BotSettings {
   final double tp1Multiplier;
   final double tp2Multiplier;
   final double tp3Multiplier;
-  final double trailingPercent;
-  final int tpCount;
-  final bool enableTrailing;
   final double tp4Multiplier;
   final double tp5Multiplier;
+  final int tpCount;
+  final bool enableTrailing;
+  final double trailingPercent;
   final int leverage;
   final double riskPerTradePct;
 
@@ -70,34 +70,24 @@ class BotSettings {
     double? minRealMarketCap, double? maxRealMarketCap, bool? skipUpcomingUnlocks,
     double? flagMinImpulse, double? vrevWickBodyRatio, double? vrevVolumeSpike,
     double? tp1Multiplier, double? tp2Multiplier, double? tp3Multiplier,
+    double? tp4Multiplier, double? tp5Multiplier, int? tpCount, bool? enableTrailing,
     double? trailingPercent, int? leverage, double? riskPerTradePct,
   }) {
     return BotSettings(
-      themeMode: themeMode ?? this.themeMode,
-      tradingMode: tradingMode ?? this.tradingMode,
+      themeMode: themeMode ?? this.themeMode, tradingMode: tradingMode ?? this.tradingMode,
       environment: environment ?? this.environment,
-      minTurnover24h: minTurnover24h ?? this.minTurnover24h,
-      maxTurnover24h: maxTurnover24h ?? this.maxTurnover24h,
-      minOpenInterest: minOpenInterest ?? this.minOpenInterest,
-      capMultiplier: capMultiplier ?? this.capMultiplier,
-      minEstimatedCap: minEstimatedCap ?? this.minEstimatedCap,
-      maxEstimatedCap: maxEstimatedCap ?? this.maxEstimatedCap,
-      minRealMarketCap: minRealMarketCap ?? this.minRealMarketCap,
-      maxRealMarketCap: maxRealMarketCap ?? this.maxRealMarketCap,
+      minTurnover24h: minTurnover24h ?? this.minTurnover24h, maxTurnover24h: maxTurnover24h ?? this.maxTurnover24h,
+      minOpenInterest: minOpenInterest ?? this.minOpenInterest, capMultiplier: capMultiplier ?? this.capMultiplier,
+      minEstimatedCap: minEstimatedCap ?? this.minEstimatedCap, maxEstimatedCap: maxEstimatedCap ?? this.maxEstimatedCap,
+      minRealMarketCap: minRealMarketCap ?? this.minRealMarketCap, maxRealMarketCap: maxRealMarketCap ?? this.maxRealMarketCap,
       skipUpcomingUnlocks: skipUpcomingUnlocks ?? this.skipUpcomingUnlocks,
-      flagMinImpulse: flagMinImpulse ?? this.flagMinImpulse,
-      vrevWickBodyRatio: vrevWickBodyRatio ?? this.vrevWickBodyRatio,
+      flagMinImpulse: flagMinImpulse ?? this.flagMinImpulse, vrevWickBodyRatio: vrevWickBodyRatio ?? this.vrevWickBodyRatio,
       vrevVolumeSpike: vrevVolumeSpike ?? this.vrevVolumeSpike,
-      tp1Multiplier: tp1Multiplier ?? this.tp1Multiplier,
-      tp2Multiplier: tp2Multiplier ?? this.tp2Multiplier,
-      tp3Multiplier: tp3Multiplier ?? this.tp3Multiplier,
-      trailingPercent: trailingPercent ?? this.trailingPercent,
-      tp4Multiplier: tp4Multiplier ?? this.tp4Multiplier,
-      tp5Multiplier: tp5Multiplier ?? this.tp5Multiplier,
-      tpCount: tpCount ?? this.tpCount,
-      enableTrailing: enableTrailing ?? this.enableTrailing,
-      leverage: leverage ?? this.leverage,
-      riskPerTradePct: riskPerTradePct ?? this.riskPerTradePct,
+      tp1Multiplier: tp1Multiplier ?? this.tp1Multiplier, tp2Multiplier: tp2Multiplier ?? this.tp2Multiplier,
+      tp3Multiplier: tp3Multiplier ?? this.tp3Multiplier, tp4Multiplier: tp4Multiplier ?? this.tp4Multiplier,
+      tp5Multiplier: tp5Multiplier ?? this.tp5Multiplier, tpCount: tpCount ?? this.tpCount,
+      enableTrailing: enableTrailing ?? this.enableTrailing, trailingPercent: trailingPercent ?? this.trailingPercent,
+      leverage: leverage ?? this.leverage, riskPerTradePct: riskPerTradePct ?? this.riskPerTradePct,
     );
   }
 }
@@ -111,8 +101,7 @@ class SettingsRepository {
   Future<BotSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
     return BotSettings(
-      themeMode: _parseTheme(prefs.getString('theme')),
-      tradingMode: _parseTrading(prefs.getString('trading')),
+      themeMode: _parseTheme(prefs.getString('theme')), tradingMode: _parseTrading(prefs.getString('trading')),
       environment: _parseEnv(prefs.getString('env')),
       minTurnover24h: prefs.getDouble('min_turn') ?? AppConstants.MIN_TURNOVER_24H,
       maxTurnover24h: prefs.getDouble('max_turn') ?? AppConstants.MAX_TURNOVER_24H,
@@ -129,13 +118,12 @@ class SettingsRepository {
       tp1Multiplier: prefs.getDouble('tp1') ?? AppConstants.TP1_MULTIPLIER,
       tp2Multiplier: prefs.getDouble('tp2') ?? AppConstants.TP2_MULTIPLIER,
       tp3Multiplier: prefs.getDouble('tp3') ?? AppConstants.TP3_MULTIPLIER,
-      trailingPercent: prefs.getDouble('trail') ?? AppConstants.TRAILING_PERCENT,
       tp4Multiplier: prefs.getDouble('tp4') ?? 2.5,
       tp5Multiplier: prefs.getDouble('tp5') ?? 4.0,
       tpCount: prefs.getInt('tp_count') ?? 3,
       enableTrailing: prefs.getBool('trail_en') ?? true,
-      leverage: prefs.getInt('lev') ?? 3,
-      riskPerTradePct: prefs.getDouble('risk') ?? 5.0,
+      trailingPercent: prefs.getDouble('trail') ?? AppConstants.TRAILING_PERCENT,
+      leverage: prefs.getInt('lev') ?? 3, riskPerTradePct: prefs.getDouble('risk') ?? 5.0,
     );
   }
 
@@ -151,11 +139,9 @@ class SettingsRepository {
       prefs.setDouble('flag_imp', s.flagMinImpulse), prefs.setDouble('vrev_wick', s.vrevWickBodyRatio),
       prefs.setDouble('vrev_vol', s.vrevVolumeSpike), prefs.setDouble('tp1', s.tp1Multiplier),
       prefs.setDouble('tp2', s.tp2Multiplier), prefs.setDouble('tp3', s.tp3Multiplier),
-      prefs.setDouble('trail', s.trailingPercent),
-      prefs.setDouble('tp4', s.tp4Multiplier),
-      prefs.setDouble('tp5', s.tp5Multiplier),
-      prefs.setInt('tp_count', s.tpCount),
-      prefs.setBool('trail_en', s.enableTrailing), prefs.setInt('lev', s.leverage),
+      prefs.setDouble('tp4', s.tp4Multiplier), prefs.setDouble('tp5', s.tp5Multiplier),
+      prefs.setInt('tp_count', s.tpCount), prefs.setBool('trail_en', s.enableTrailing),
+      prefs.setDouble('trail', s.trailingPercent), prefs.setInt('lev', s.leverage),
       prefs.setDouble('risk', s.riskPerTradePct),
     ]);
   }
@@ -181,11 +167,10 @@ class SettingsRepository {
       flagMinImpulse: (map['flagMinImpulse'] as num).toDouble(), vrevWickBodyRatio: (map['vrevWickBodyRatio'] as num).toDouble(),
       vrevVolumeSpike: (map['vrevVolumeSpike'] as num).toDouble(), tp1Multiplier: (map['tp1Multiplier'] as num).toDouble(),
       tp2Multiplier: (map['tp2Multiplier'] as num).toDouble(), tp3Multiplier: (map['tp3Multiplier'] as num).toDouble(),
-      trailingPercent: (map['trailingPercent'] as num).toDouble(),
       tp4Multiplier: (map['tp4Multiplier'] as num?)?.toDouble() ?? 2.5,
       tp5Multiplier: (map['tp5Multiplier'] as num?)?.toDouble() ?? 4.0,
-      tpCount: (map['tpCount'] as num?)?.toInt() ?? 3,
-      enableTrailing: map['enableTrailing'] as bool? ?? true, leverage: (map['leverage'] as num).toInt(),
+      tpCount: (map['tpCount'] as num?)?.toInt() ?? 3, enableTrailing: map['enableTrailing'] as bool? ?? true,
+      trailingPercent: (map['trailingPercent'] as num).toDouble(), leverage: (map['leverage'] as num).toInt(),
       riskPerTradePct: (map['riskPerTradePct'] as num).toDouble(),
     );
   }
