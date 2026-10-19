@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:native_dio_adapter/native_dio_adapter.dart';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
@@ -43,6 +43,10 @@ class BybitApi {
   late final Dio _dio = _buildDio();
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
 
+  BybitApi() {
+    _dio.httpClientAdapter = NativeAdapter();
+  }
+
   static const int _maxAttempts = 5;
   static const int _rateLimitPauseMs = 15000;
 
@@ -62,14 +66,8 @@ class BybitApi {
       },
     ));
 
-    dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final client = HttpClient();
-        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-        client.connectionTimeout = const Duration(seconds: 30);
-        return client;
-      },
-    );
+    // Используем системный движок Android (Chrome) для обхода Cloudflare
+    dio.httpClientAdapter = NativeAdapter();
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
