@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/bot_status_provider.dart';
 import '../../core/providers/trades_provider.dart';
+import '../../core/providers/system_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/candle.dart';
 import '../../data/sources/bybit_api.dart';
@@ -68,6 +69,7 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final trades = context.watch<TradesProvider>();
     final bot = context.watch<BotStatusProvider>();
+    final sys = context.watch<SystemProvider>();
 
     if ((trades.active.isNotEmpty || trades.watched.isNotEmpty) && _miniCandles.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCandles());
@@ -86,11 +88,42 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
           tabs: [Tab(text: 'Активные (${trades.active.length})'), Tab(text: 'Наблюдение (${trades.watched.length})')],
         ),
       ),
-      body: TabBarView(
-        controller: _tab,
+      body: Column(
         children: [
-          _ActiveList(trades: trades.active, prices: _prices, miniCandles: _miniCandles),
-          _WatchedList(trades: trades.watched, prices: _prices, miniCandles: _miniCandles),
+          Expanded(
+            child: TabBarView(
+              controller: _tab,
+              children: [
+                _ActiveList(trades: trades.active, prices: _prices, miniCandles: _miniCandles),
+                _WatchedList(trades: trades.watched, prices: _prices, miniCandles: _miniCandles),
+              ],
+            ),
+          ),
+          // 🖥 МИКРО-КОНСОЛЬ
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border(top: BorderSide(color: AppColors.darkBorder)),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 12, height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accentGreen),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    sys.currentAction,
+                    style: const TextStyle(color: AppColors.accentGreen, fontSize: 12, fontFamily: 'monospace'),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

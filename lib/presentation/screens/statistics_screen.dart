@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/trades_provider.dart';
+import '../../core/providers/system_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/closed_trade.dart';
+import '../../data/models/system_status.dart';
 import '../../data/repositories/balance_repository.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -25,6 +27,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Widget build(BuildContext context) {
     final trades = context.watch<TradesProvider>();
     final settings = context.watch<SettingsProvider>();
+    final sys = context.watch<SystemProvider>();
     final chartPoints = _history.isNotEmpty ? _history : [BalancePoint(timestamp: DateTime.now(), balance: settings.paperBalanceUsdt)];
 
     return Scaffold(
@@ -42,6 +45,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             _BalanceHeadlineCard(usdt: settings.paperBalanceUsdt, rub: settings.balanceInRub, rate: settings.usdRubRate, pnlUsdt: trades.totalPnlUsdt),
             _SectionTitle('Динамика баланса'),
             _BalanceChartCard(points: chartPoints),
+            _SectionTitle('Здоровье системы (API)'),
+            _SystemHealthCard(metrics: sys.metrics, history: sys.history),
             _SectionTitle('Статистика'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -283,4 +288,67 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   @override
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(20, 18, 20, 6), child: Text(text.toUpperCase(), style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)));
+}
+
+
+class _SystemHealthCard extends StatelessWidget {
+  final Map<String, ApiMetric> metrics;
+  final List<String> history;
+  const _SystemHealthCard({required this.metrics, required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.darkSurface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.darkBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // API Метрики
+          ...metrics.values.map((m) {
+            final successRate = m.successCount + m.errorCount == 0 ? 0.0 : (m.successCount / (m.successCount + m.errorCount)) * 100;
+            final color = successRate > 95 ? AppColors.accentGreen : (successRate > 80 ? AppColors.accentYellow : AppColors.accentRed);
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_done_outlined, size: 18, color: color),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(m.name, style: const TextStyle(color: AppColors.darkTextPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Успешно: ${m.successCount} | Ошибок: ${m.errorCount} | Пинг: ${m.lastLatencyMs}мс', style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  Text('${successRate.toStringAsFixed(1)}%', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                ],
+              ),
+            );
+          }),
+          
+          const Divider(color: AppColors.darkBorder, height: 24),
+          
+          // Мини-консоль (последние 5 логов)
+          const Text('Последние события:', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: history.reversed.take(5).map((log) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(log, style: const TextStyle(color: AppColors.accentGreen, fontSize: 10, fontFamily: 'monospace'), maxLines: 1, overflow: TextOverflow.ellipsis),
+              )).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
