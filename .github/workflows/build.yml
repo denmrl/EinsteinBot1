@@ -18,8 +18,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          # 🚀 Ключевое обновление: используем свежую стабильную версию Flutter,
-          # которая гарантированно поддерживает 16KB выравнивание.
           flutter-version: '3.29.0'
           channel: 'stable'
 
@@ -31,12 +29,58 @@ jobs:
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
-      - name: Overwrite gradle files
+      - name: Patch AndroidManifest (Foreground Service & Permissions)
+        run: |
+          python3 - << 'PYEOF'
+          import os
+          
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path, 'r') as f:
+              content = f.read()
+          
+          # 1. Добавляем разрешения
+          permissions = '''    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+          '''
+          if 'android.permission.FOREGROUND_SERVICE' not in content:
+              content = content.replace('<application', permissions + '\n    <application')
+          
+          # 2. Добавляем сервис и ресивер уведомлений
+          service_block = '''        <service
+                      android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+                      android:foregroundServiceType="dataSync"
+                      android:exported="false"
+                      android:stopWithTask="false" />
+                  
+                  <receiver
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+                      android:exported="false" />
+                  <receiver
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                      </intent-filter>
+                  </receiver>
+          '''
+          if 'com.pravera.flutter_foreground_task.service.ForegroundService' not in content:
+              content = content.replace('</application>', service_block + '\n    </application>')
+          
+          with open(path, 'w') as f:
+              f.write(content)
+          print("✅ AndroidManifest.xml успешно пропатчен!")
+          PYEOF
+
+      - name: Overwrite settings.gradle and build.gradle
         run: |
           rm -f android/settings.gradle android/settings.gradle.kts
           rm -f android/build.gradle android/build.gradle.kts
 
-          # 🚀 Обновляем AGP до 8.5.1, Kotlin до 1.9.25
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
@@ -76,7 +120,6 @@ jobs:
           tasks.register("clean", Delete) { delete rootProject.buildDir }
           EOF
 
-          # 🚀 Указываем NDK 28, который корректно выравнивает .so файлы
           cat > android/app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -87,9 +130,7 @@ jobs:
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file("local.properties")
           if (localPropertiesFile.exists()) {
-              localPropertiesFile.withReader("UTF-8") { reader ->
-                  localProperties.load(reader)
-              }
+              localPropertiesFile.withReader("UTF-8") { reader -> localProperties.load(reader) }
           }
           def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
           def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
@@ -97,7 +138,7 @@ jobs:
           android {
               namespace = "com.example.einstein_app"
               compileSdk = 35
-              ndkVersion = "27.2.12479018" // 🚀 Современный NDK для Android 15
+              ndkVersion = "27.2.12479018"
 
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -109,7 +150,7 @@ jobs:
               defaultConfig {
                   applicationId = "com.einstein.app"
                   minSdk = 24
-                  targetSdk = 35 // 🚀 Target Android 15
+                  targetSdk = 35
                   versionCode = flutterVersionCode.toInteger()
                   versionName = flutterVersionName
                   multiDexEnabled true
@@ -130,53 +171,8 @@ jobs:
           EOF
 
       - name: Upgrade Gradle wrapper to 8.7
-        run: sed -i 's/gradle-8.4-all.zip/gradle-8.7-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
-
-      - name: Accept Android SDK licenses
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "ndk;27.2.12479018" || true
-
-      - name: Override splash styles (dark background)
-        run: |
-          cat > android/app/src/main/res/values/styles.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
-                  <item name="android:windowBackground">@drawable/launch_background</item>
-                  <item name="android:windowSplashScreenBackground">#0E1116</item>
-                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-                  <item name="android:windowSplashScreenIconBackgroundColor">#0E1116</item>
-              </style>
-              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-                  <item name="android:windowBackground">#0E1116</item>
-                  <item name="android:windowLightStatusBar">false</item>
-              </style>
-          </resources>
-          EOF
-
-          mkdir -p android/app/src/main/res/values-v31
-          cat > android/app/src/main/res/values-v31/styles.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
-                  <item name="android:windowSplashScreenBackground">#0E1116</item>
-                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-                  <item name="android:windowSplashScreenIconBackgroundColor">#0E1116</item>
-              </style>
-              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-                  <item name="android:windowBackground">#0E1116</item>
-                  <item name="android:windowLightStatusBar">false</item>
-              </style>
-          </resources>
-          EOF
-
-          cat > android/app/src/main/res/drawable/launch_background.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:drawable="#0E1116" />
-          </layer-list>
-          EOF
+        run: sed -i 's/gradle-7.6.3-all.zip/gradle-8.7-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        # (если уже 8.4, то заменит на 8.7)
 
       - name: Build universal APK
         run: flutter build apk --release
