@@ -153,6 +153,11 @@ class BybitApi {
         final map = Map<String, dynamic>.from(data);
 
         final retCode = map['retCode'];
+        if (retCode == null) {
+          sw.stop();
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Нет retCode. Ответ: ${map.toString()}');
+          throw BybitApiException('Неизвестный ответ: ${map.toString()}');
+        }
         if (retCode == 0) {
           sw.stop();
           SystemRepository.instance.logApiCall('Bybit', true, sw.elapsedMilliseconds);
@@ -161,7 +166,7 @@ class BybitApi {
 
         sw.stop();
         final msg = map['retMsg'] ?? 'Неизвестная ошибка';
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: '$retCode: $msg');
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Code $retCode: $msg');
 
         if (retCode == 10002 || retCode == 10006 || retCode == 429) {
           await Future.delayed(Duration(milliseconds: _rateLimitPauseMs));
@@ -174,7 +179,7 @@ class BybitApi {
         sw.stop();
         // Правильный вывод ошибки без литералов
         final errorText = e.toString();
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: errorText);
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'NetError: $errorText');
 
         final errStr = e.message?.toLowerCase() ?? '';
         final isRate = errStr.contains('429') || errStr.contains('too many requests') || errStr.contains('rate limit');
