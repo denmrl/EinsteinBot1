@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:cronet_http/cronet_http.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'dart:io';
 import 'package:logger/logger.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -53,38 +54,42 @@ class BybitApi {
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
       validateStatus: (status) => status != null && status < 600,
-      persistentConnection: false,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
-        'X-Requested-With': 'XMLHttpRequest',
       },
     ));
 
-    // Настройка нативного HttpClient
-    dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final client = HttpClient();
-        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-        client.connectionTimeout = const Duration(seconds: 30);
-        // Форсируем IPv4 и отключаем HTTP/2 (частая причина таймаутов на Android)
-        client.findProxy = (uri) => 'DIRECT';
-        return client;
-      },
-    );
+    // 🚀 ВОТ ОНО: Используем движок Chrome (Cronet) на Android
+    if (Platform.isAndroid) {
+      try {
+        final cronetClient = CronetClient.defaultCronetEngine();
+        dio.httpClientAdapter = CronetHttpClientAdapter(cronetClient);
+        _log.i('🌐 Сетевой движок: Cronet (Chrome)');
+      } catch (e) {
+        _log.e('⚠ Ошибка загрузки Cronet, используем стандартный: $e');
+        dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () {
+          final client = HttpClient();
+          client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+          return client;
+        });
+      }
+    } else {
+      // Для iOS и остальных
+      dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () {
+        return HttpClient();
+      });
+    }
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
-        _log.d('→ ${options.method} ${options.path}');
         handler.next(options);
       },
       onResponse: (response, handler) {
-        _log.d('← ${response.statusCode} ${response.requestOptions.path}');
         handler.next(response);
       },
       onError: (error, handler) {
-        _log.w('⚠ Ошибка: ${error.message} ${error.requestOptions.path}');
         handler.next(error);
       },
     ));
@@ -126,6 +131,10 @@ class BybitApi {
     Map<String, dynamic>? body,
     bool isPrivate = false,
   }) async {
+    if (!hasCredentials) {
+      throw BybitApiException('Ключи API не введены! Зайдите в Режим -> Real и сохраните ключи.');
+    }
+
     for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
       final sw = Stopwatch()..start();
       await RateLimiter.instance.wait();
@@ -152,22 +161,19 @@ class BybitApi {
         final data = response.data;
         if (data is! Map) {
           sw.stop();
-          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Не Map. Ответ: ${data.toString().substring(0, min(50, data.toString().length))}...');
+          final strData = data.toString();
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Не Map. Ответ: ${strData.substring(0, min(100, strData.length))}');
           throw BybitApiException('Неверный формат ответа');
         }
+        
         final map = Map<String, dynamic>.from(data);
-
         final retCode = map['retCode'];
         if (retCode == null) {
           sw.stop();
           SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Пустой JSON: ${map.toString()}');
           throw BybitApiException('Нет retCode в ответе');
         }
-        if (retCode == null) {
-          sw.stop();
-          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Нет retCode. Ответ: ${map.toString()}');
-          throw BybitApiException('Неизвестный ответ: ${map.toString()}');
-        }
+
         if (retCode == 0) {
           sw.stop();
           SystemRepository.instance.logApiCall('Bybit', true, sw.elapsedMilliseconds);
@@ -187,7 +193,6 @@ class BybitApi {
         await Future.delayed(const Duration(seconds: 2));
       } on DioException catch (e) {
         sw.stop();
-        // Правильный вывод ошибки без литералов
         final errorText = e.toString();
         SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'NetError: $errorText');
 
