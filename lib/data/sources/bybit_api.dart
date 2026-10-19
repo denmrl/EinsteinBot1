@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'dart:io';
 import 'package:logger/logger.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -47,9 +49,9 @@ class BybitApi {
   Dio _buildDio() {
     final dio = Dio(BaseOptions(
       baseUrl: AppConstants.BYBIT_BASE_URL,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: Duration(seconds: AppConstants.BYBIT_TIMEOUT_SEC),
-      sendTimeout: Duration(seconds: AppConstants.BYBIT_TIMEOUT_SEC),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
       validateStatus: (status) => status != null && status < 600,
       headers: {
         'Content-Type': 'application/json',
@@ -57,6 +59,16 @@ class BybitApi {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
     ));
+
+    // Настройка нативного HttpClient
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        client.connectionTimeout = const Duration(seconds: 30);
+        return client;
+      },
+    );
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
