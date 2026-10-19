@@ -39,7 +39,9 @@ jobs:
               content = f.read()
           
           # 1. Добавляем разрешения
-          permissions = '''    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+          permissions = '''    <uses-permission android:name="android.permission.INTERNET" />
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+        <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
