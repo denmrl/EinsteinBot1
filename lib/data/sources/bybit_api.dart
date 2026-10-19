@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:native_dio_adapter/native_dio_adapter.dart';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:logger/logger.dart';
+import 'package:native_dio_adapter/native_dio_adapter.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/rate_limiter.dart';
@@ -44,10 +43,6 @@ class BybitApi {
   late final Dio _dio = _buildDio();
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
 
-  BybitApi() {
-    _dio.httpClientAdapter = NativeAdapter();
-  }
-
   static const int _maxAttempts = 5;
   static const int _rateLimitPauseMs = 15000;
 
@@ -58,7 +53,7 @@ class BybitApi {
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
       validateStatus: (status) => status != null && status < 600,
-      persistentConnection: false, // Отключаем keep-alive для стабильности
+      persistentConnection: false,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json, text/plain, */*',
@@ -67,7 +62,7 @@ class BybitApi {
       },
     ));
 
-    // Используем системный движок Android (Chrome) для обхода Cloudflare
+    // 🚀 ИСПОЛЬЗУЕМ NATIVE ADAPTER (CHROME) ДЛЯ ОБХОДА CLOUDFLARE
     dio.httpClientAdapter = NativeAdapter();
 
     dio.interceptors.add(InterceptorsWrapper(
@@ -103,7 +98,6 @@ class BybitApi {
       ..write(AppConstants.BYBIT_RECV_WINDOW)
       ..write(queryString ?? jsonBody ?? '');
 
-    // ДОКАЗАТЕЛЬСТВО ПОДПИСИ
     SystemRepository.instance.updateAction('[AUTH] Подпись ключом: ${_apiKey!.substring(0, 4)}***');
 
     final signature = Hmac(sha256, utf8.encode(_apiSecret!))
@@ -135,7 +129,6 @@ class BybitApi {
 
       try {
         Map<String, String>? headers;
-        // Подписываем ВСЕ запросы, если есть ключи (для обхода Cloudflare)
         if (isPrivate || hasCredentials) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           if (method == 'GET') {
@@ -153,7 +146,7 @@ class BybitApi {
           options: Options(
             method: method,
             headers: headers,
-            responseType: ResponseType.plain, // Читаем как текст!
+            responseType: ResponseType.plain,
           ),
         );
 

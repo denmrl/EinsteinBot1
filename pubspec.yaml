@@ -8,6 +8,7 @@ environment:
   flutter: ">=3.24.0"
 
 dependencies:
+  flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
@@ -17,14 +18,11 @@ dependencies:
   hive_ce: ^2.1.0
   hive_ce_flutter: ^2.1.0
   path_provider: ^2.1.4
-  flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
   dio: ^5.7.0
-  native_dio_adapter: ^1.2.0
-  cronet_http: ^1.3.0
-  http: ^1.2.2
-  cupertino_http: ^1.3.2
   crypto: ^3.0.6
+  native_dio_adapter: ^1.2.0
   flutter_foreground_task: ^8.17.0
   flutter_local_notifications: ^17.2.4
   permission_handler: ^11.3.1
@@ -41,3 +39,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/
