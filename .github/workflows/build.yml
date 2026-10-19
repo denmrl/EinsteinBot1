@@ -29,7 +29,7 @@ jobs:
           rm -rf android
           flutter create . --platforms=android --project-name=einstein_app
 
-      - name: Patch AndroidManifest (Foreground Service & Permissions)
+      - name: Patch AndroidManifest (INTERNET & Foreground Service & Permissions)
         run: |
           python3 - << 'PYEOF'
           import os
@@ -38,17 +38,17 @@ jobs:
           with open(path, 'r') as f:
               content = f.read()
           
-          # 1. Добавляем разрешения
+          # 1. Добавляем ВСЕ разрешения (включая INTERNET!)
           permissions = '''    <uses-permission android:name="android.permission.INTERNET" />
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-        <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
           '''
-          if 'android.permission.FOREGROUND_SERVICE' not in content:
+          if 'android.permission.INTERNET' not in content:
               content = content.replace('<application', permissions + '\n    <application')
           
           # 2. Добавляем сервис и ресивер уведомлений
@@ -75,7 +75,7 @@ jobs:
           
           with open(path, 'w') as f:
               f.write(content)
-          print("✅ AndroidManifest.xml успешно пропатчен!")
+          print("✅ AndroidManifest.xml успешно пропатчен (добавлен INTERNET)!")
           PYEOF
 
       - name: Overwrite settings.gradle and build.gradle
@@ -174,7 +174,6 @@ jobs:
 
       - name: Upgrade Gradle wrapper to 8.7
         run: sed -i 's/gradle-7.6.3-all.zip/gradle-8.7-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
-        # (если уже 8.4, то заменит на 8.7)
 
       - name: Build universal APK
         run: flutter build apk --release
