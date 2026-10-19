@@ -5,7 +5,7 @@ class RateLimiter {
   RateLimiter._internal();
   static final RateLimiter instance = RateLimiter._internal();
 
-  static const int _delayMs = 1650;
+  static const int _delayMs = 2000;
   Future<void> _tail = Future.value();
 
   Future<void> wait() {
