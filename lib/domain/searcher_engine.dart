@@ -50,7 +50,7 @@ class SearcherEngine {
   Future<void> _tick() async {
     if (_running) return;
     _running = true;
-    _updateAction('Сканирование рынка...');
+    _updateAction('[SCAN] Получение тикеров...');
     try {
       await _runScan();
     } catch (e, st) {
@@ -92,7 +92,7 @@ class SearcherEngine {
     final watched = _trades.loadWatchedSetups();
     for (final w in watched) {
       if (activeSymbols.contains(w.symbol)) continue;
-      _updateAction('Проверка наблюдения: \$w.symbol');
+      _updateAction('[WATCH] \$w.symbol');
       await _checkWatched(w);
     }
 
@@ -105,11 +105,11 @@ class SearcherEngine {
       if (activeSymbols.contains(sym) || watchedSymbols.contains(sym)) {
         continue;
       }
-      _updateAction('Анализ сетапа: \$sym');
+      _updateAction('[SCAN] \$sym');
       await _scanNewCandidate(sym, _d(t['lastPrice']));
       await Future.delayed(const Duration(milliseconds: 200));
     }
-    _updateAction('Цикл завершен. Отдых 30 сек...');
+    _updateAction('[WAIT] Спим 30 сек...');
   }
 
   Future<void> _checkWatched(WatchedSetup w) async {

@@ -9,14 +9,18 @@ class SystemRepository {
   Box get _box => Hive.box('system_metrics');
 
   Future<void> updateAction(String action) async {
-    await _box.put('current_action', action);
-    await _box.put('last_action_time', DateTime.now().millisecondsSinceEpoch);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('live_action', action);
     
-    // Сохраняем последние 20 действий для истории
-    List<dynamic> history = _box.get('history', defaultValue: []);
-    history.add('${DateTime.now().toString().substring(11, 19)} - $action');
+    // Сохраняем последние 20 действий для истории в SharedPreferences
+    List<String> history = prefs.getStringList('action_history') ?? [];
+    
+    final timeStr = DateTime.now().toString().substring(11, 19);
+    final logEntry = '[$timeStr] $action';
+    
+    history.add(logEntry);
     if (history.length > 20) history.removeAt(0);
-    await _box.put('history', history);
+    await prefs.setStringList('action_history', history);
   }
 
   Future<void> logApiCall(String apiName, bool isSuccess, int latencyMs, {String? errorMsg}) async {
@@ -29,11 +33,15 @@ class SystemRepository {
       successCount: metric.successCount + (isSuccess ? 1 : 0),
       errorCount: metric.errorCount + (isSuccess ? 0 : 1),
       lastLatencyMs: latencyMs,
-      lastError: errorMsg,
       lastUpdate: DateTime.now(),
+      lastError: errorMsg,
     );
     
     await _box.put(key, metric.toMap());
+    
+    if (!isSuccess && errorMsg != null) {
+      await updateAction('[ERR] $apiName: $errorMsg');
+    }
   }
 
   Map<String, ApiMetric> getAllMetrics() {
@@ -47,5 +55,5 @@ class SystemRepository {
   }
 
   String getCurrentAction() => _box.get('current_action', defaultValue: 'Ожидание...');
-  List<String> getHistory() => List<String>.from(_box.get('history', defaultValue: []));
+  List<String> getHistory() => [];
 }

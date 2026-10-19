@@ -343,7 +343,7 @@ class _SystemHealthCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: history.reversed.take(5).map((log) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(log, style: const TextStyle(color: AppColors.accentGreen, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(log, style: const TextStyle(color: AppColors.accentGreen, fontSize: 12, fontFamily: 'Roboto'), maxLines: 1, overflow: TextOverflow.ellipsis),
               )).toList(),
             ),
           ),

@@ -26,13 +26,18 @@ class SystemProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
       
-      final action = prefs.getString('live_action') ?? 'Ожидание...';
+      // Очищаем строку от возможных невидимых символов
+      String action = prefs.getString('live_action') ?? 'Ожидание...';
+      action = action.replaceAll('\u0000', '');
+      
       final hist = prefs.getStringList('action_history') ?? [];
+      // Очищаем историю от null-байтов
+      final cleanHist = hist.map((e) => e.replaceAll('\u0000', '')).toList();
       
       bool changed = false;
       if (action != _liveAction) { _liveAction = action; changed = true; }
-      if (hist.length != _history.length || (hist.isNotEmpty && _history.isNotEmpty && hist.last != _history.last)) {
-        _history = hist; changed = true;
+      if (cleanHist.length != _history.length || (cleanHist.isNotEmpty && _history.isNotEmpty && cleanHist.last != _history.last)) {
+        _history = cleanHist; changed = true;
       }
       
       if (changed) notifyListeners();
