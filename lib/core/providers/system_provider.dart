@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/system_status.dart';
 import '../../data/repositories/system_repository.dart';
 
@@ -10,32 +11,28 @@ class SystemProvider extends ChangeNotifier {
   String _liveAction = 'Ожидание...';
 
   SystemProvider() {
-    // Слушаем прямые сообщения из фонового изолята
+    // 1. Прямые сообщения из фона (работают мгновенно)
     FlutterForegroundTask.addTaskDataCallback((data) {
-      debugPrint('📩 [SystemProvider] Получено из фона: $data');
       if (data is Map && data['action'] != null) {
         _liveAction = data['action'].toString();
         notifyListeners();
       }
     });
 
-    // На всякий случай опрашиваем Hive (вдруг сообщение из фона потерялось)
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _pollHive());
+    // 2. Опрос SharedPreferences раз в секунду (железобетонный способ)
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _pollSharedPrefs());
   }
 
-  void _pollHive() {
+  Future<void> _pollSharedPrefs() async {
     try {
-      if (Hive.isBoxOpen('system_metrics')) {
-        final box = Hive.box('system_metrics');
-        final action = box.get('current_action', defaultValue: 'Ожидание...');
-        if (action != _liveAction) {
-          _liveAction = action.toString();
-          notifyListeners();
-        }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload(); // Принудительно читаем с диска
+      final action = prefs.getString('live_action') ?? 'Ожидание...';
+      if (action != _liveAction) {
+        _liveAction = action;
+        notifyListeners();
       }
-    } catch (e) {
-      debugPrint('⚠ [SystemProvider] Ошибка чтения Hive: $e');
-    }
+    } catch (_) {}
   }
 
   String get currentAction => _liveAction;

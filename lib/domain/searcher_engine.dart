@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../core/constants/app_constants.dart';
