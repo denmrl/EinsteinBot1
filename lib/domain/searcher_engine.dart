@@ -11,6 +11,7 @@ import '../data/models/watched_setup.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/trades_repository.dart';
 import '../data/sources/bybit_api.dart';
+import '../data/sources/external_api.dart';
 import '../data/sources/kline_cache.dart';
 import 'macro_analyzer.dart';
 import 'pattern_detector.dart';
@@ -159,6 +160,24 @@ class SearcherEngine {
   }
 
   Future<void> _scanNewCandidate(String symbol, double lastPrice) async {
+    final settings = await _settings.load();
+    
+    if (settings.skipUpcomingUnlocks) {
+      final hasUnlock = await ExternalApi.instance.hasUpcomingUnlock(symbol);
+      if (hasUnlock) {
+        _log.i('🛑 $symbol пропущен: разблокировка токенов');
+        return;
+      }
+    }
+
+    final exactCap = await ExternalApi.instance.getMarketCap(symbol);
+    if (exactCap != null) {
+      if (exactCap < settings.minRealMarketCap || exactCap > settings.maxRealMarketCap) {
+        _log.i('🛑 $symbol пропущен: реальная капа \$${exactCap.toStringAsFixed(0)}');
+        return;
+      }
+    }
+
     final c1d = await _fetchKline(symbol, 'D');
     final c1h = await _fetchKline(symbol, '60');
     if (c1d.isEmpty || c1h.isEmpty) return;

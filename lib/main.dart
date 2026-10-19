@@ -67,6 +67,7 @@ Future<void> main() async {
     Hive.openBox(AppConstants.BOX_SETTINGS),
     Hive.openBox(AppConstants.BOX_BALANCE_HISTORY),
     Hive.openBox(AppConstants.BOX_EVENT_LOG),
+    Hive.openBox(AppConstants.BOX_STRATEGY_PROFILES),
   ]);
 
   tz_data.initializeTimeZones();
