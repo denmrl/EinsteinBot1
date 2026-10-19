@@ -4,8 +4,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:cronet_http/cronet_http.dart';
-import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -27,6 +26,7 @@ class BybitApi {
 
   String? _apiKey;
   String? _apiSecret;
+  String _baseUrl = AppConstants.BYBIT_BASE_URL;
 
   void setCredentials({String? apiKey, String? apiSecret}) {
     _apiKey = apiKey;
@@ -34,67 +34,31 @@ class BybitApi {
   }
 
   void setBaseUrl(String url) {
-    _dio.options.baseUrl = url;
+    _baseUrl = url;
   }
 
   bool get hasCredentials =>
       _apiKey != null && _apiKey!.isNotEmpty &&
       _apiSecret != null && _apiSecret!.isNotEmpty;
 
-  late final Dio _dio = _buildDio();
   final _log = Logger(printer: PrettyPrinter(methodCount: 0));
-
   static const int _maxAttempts = 5;
   static const int _rateLimitPauseMs = 15000;
 
-  Dio _buildDio() {
-    final dio = Dio(BaseOptions(
-      baseUrl: AppConstants.BYBIT_BASE_URL,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30),
-      validateStatus: (status) => status != null && status < 600,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
-      },
-    ));
+  // 🚀 Инициализация клиента Chrome (Cronet)
+  late final http.Client _client = _buildClient();
 
-    // 🚀 ВОТ ОНО: Используем движок Chrome (Cronet) на Android
+  http.Client _buildClient() {
     if (Platform.isAndroid) {
       try {
-        final cronetClient = CronetClient.defaultCronetEngine();
-        dio.httpClientAdapter = CronetHttpClientAdapter(cronetClient);
         _log.i('🌐 Сетевой движок: Cronet (Chrome)');
+        return CronetClient.defaultCronetEngine();
       } catch (e) {
-        _log.e('⚠ Ошибка загрузки Cronet, используем стандартный: $e');
-        dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () {
-          final client = HttpClient();
-          client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-          return client;
-        });
+        _log.e('⚠ Ошибка Cronet, используем стандартный: $e');
+        return http.Client();
       }
-    } else {
-      // Для iOS и остальных
-      dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () {
-        return HttpClient();
-      });
     }
-
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        handler.next(options);
-      },
-      onResponse: (response, handler) {
-        handler.next(response);
-      },
-      onError: (error, handler) {
-        handler.next(error);
-      },
-    ));
-
-    return dio;
+    return http.Client();
   }
 
   Map<String, String> _signHeaders({
@@ -140,89 +104,80 @@ class BybitApi {
       await RateLimiter.instance.wait();
 
       try {
-        Map<String, String>? headers;
+        Map<String, String> headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+        };
+
         if (isPrivate || hasCredentials) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           if (method == 'GET') {
-            headers = _signHeaders(timestamp: timestamp, queryString: query != null ? _encodeQuery(query) : null);
+            headers.addAll(_signHeaders(timestamp: timestamp, queryString: query != null ? _encodeQuery(query) : null));
           } else {
             final json = body != null ? jsonEncode(body) : '';
-            headers = _signHeaders(timestamp: timestamp, jsonBody: json);
+            headers.addAll(_signHeaders(timestamp: timestamp, jsonBody: json));
           }
         }
 
-        final response = await _dio.request(
-          path,
-          data: method == 'POST' ? body : null,
-          queryParameters: method == 'GET' ? query : null,
-          options: Options(method: method, headers: headers),
-        );
+        final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: method == 'GET' ? query : null);
+        http.Response response;
 
-        final data = response.data;
-        if (data is! Map) {
-          sw.stop();
-          final strData = data.toString();
-          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Не Map. Ответ: ${strData.substring(0, min(100, strData.length))}');
-          throw BybitApiException('Неверный формат ответа');
-        }
-        
-        final map = Map<String, dynamic>.from(data);
-        final retCode = map['retCode'];
-        if (retCode == null) {
-          sw.stop();
-          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Пустой JSON: ${map.toString()}');
-          throw BybitApiException('Нет retCode в ответе');
+        if (method == 'GET') {
+          response = await _client.get(uri, headers: headers).timeout(const Duration(seconds: 30));
+        } else {
+          response = await _client.post(uri, headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 30));
         }
 
-        if (retCode == 0) {
-          sw.stop();
-          SystemRepository.instance.logApiCall('Bybit', true, sw.elapsedMilliseconds);
-          return map;
-        }
-
+        final data = response.body;
         sw.stop();
-        final msg = map['retMsg'] ?? 'Неизвестная ошибка';
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Code $retCode: $msg');
 
-        if (retCode == 10002 || retCode == 10006 || retCode == 429) {
-          await Future.delayed(Duration(milliseconds: _rateLimitPauseMs));
-          continue;
+        if (response.statusCode != 200) {
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'HTTP ${response.statusCode}: ${data.substring(0, min(100, data.length))}');
+          throw BybitApiException('HTTP ${response.statusCode}');
         }
 
-        if (attempt == _maxAttempts) throw BybitApiException(msg.toString(), retCode: retCode);
-        await Future.delayed(const Duration(seconds: 2));
-      } on DioException catch (e) {
-        sw.stop();
-        final errorText = e.toString();
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'NetError: $errorText');
+        try {
+          final map = jsonDecode(data) as Map<String, dynamic>;
+          final retCode = map['retCode'];
 
-        final errStr = e.message?.toLowerCase() ?? '';
-        final isRate = errStr.contains('429') || errStr.contains('too many requests') || errStr.contains('rate limit');
-        final isNetwork = errStr.contains('timeout') || errStr.contains('connection') || errStr.contains('socket') || errStr.contains('network');
+          if (retCode == null) {
+            SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Пустой JSON: $data');
+            throw BybitApiException('Нет retCode в ответе');
+          }
 
-        if (isRate) {
-          await Future.delayed(Duration(milliseconds: _rateLimitPauseMs));
-          continue;
+          if (retCode == 0) {
+            SystemRepository.instance.logApiCall('Bybit', true, sw.elapsedMilliseconds);
+            return map;
+          }
+
+          final msg = map['retMsg'] ?? 'Неизвестная ошибка';
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Code $retCode: $msg');
+
+          if (retCode == 10002 || retCode == 10006 || retCode == 429) {
+            await Future.delayed(Duration(milliseconds: _rateLimitPauseMs));
+            continue;
+          }
+
+          if (attempt == _maxAttempts) throw BybitApiException(msg.toString(), retCode: retCode);
+          await Future.delayed(const Duration(seconds: 2));
+        } catch (e) {
+          SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: 'Ошибка парсинга JSON: $e');
+          if (attempt == _maxAttempts) throw BybitApiException('Ошибка парсинга JSON: $e');
+          await Future.delayed(const Duration(seconds: 2));
         }
-        if (isNetwork) {
-          await Future.delayed(Duration(seconds: 3 * attempt));
-          continue;
-        }
-        if (attempt == _maxAttempts) throw BybitApiException('HTTP ошибка: ${e.message}');
-        await Future.delayed(const Duration(seconds: 2));
       } catch (e) {
         sw.stop();
         SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: e.toString());
         if (attempt == _maxAttempts) throw BybitApiException('Неизвестная ошибка: $e');
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(Duration(seconds: 3 * attempt));
       }
     }
     throw BybitApiException('Не удалось выполнить запрос после $_maxAttempts попыток: $path');
   }
 
   String _encodeQuery(Map<String, dynamic> query) {
-    final pairs = query.entries.map((e) => '${e.key}=${e.value}').toList();
-    return pairs.join('&');
+    return query.entries.map((e) => '${e.key}=${e.value}').join('&');
   }
 
   Future<List<Map<String, dynamic>>> getTickers() async {
