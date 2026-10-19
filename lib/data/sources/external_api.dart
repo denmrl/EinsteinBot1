@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import '../repositories/system_repository.dart';
 
 class ExternalApi {
   ExternalApi._internal();
@@ -24,11 +25,14 @@ class ExternalApi {
     }
 
     try {
+      final sw = Stopwatch()..start();
       final res = await _dio.get(
         'https://api.coingecko.com/api/v3/coins/markets',
         queryParameters: {'vs_currency': 'usd', 'symbols': ticker},
       );
       if (res.data != null && (res.data as List).isNotEmpty) {
+        sw.stop();
+        SystemRepository.instance.logApiCall('CoinGecko', true, sw.elapsedMilliseconds);
         final cap = (res.data[0]['market_cap'] as num?)?.toDouble() ?? 0.0;
         _capCache[ticker] = (cap: cap, time: now);
         return cap;

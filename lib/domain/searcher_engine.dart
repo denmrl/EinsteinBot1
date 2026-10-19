@@ -10,6 +10,7 @@ import '../data/models/candle.dart';
 import '../data/models/watched_setup.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/trades_repository.dart';
+import '../data/repositories/system_repository.dart';
 import '../data/sources/bybit_api.dart';
 import '../data/sources/external_api.dart';
 import '../data/sources/kline_cache.dart';
@@ -88,6 +89,7 @@ class SearcherEngine {
     final watched = _trades.loadWatchedSetups();
     for (final w in watched) {
       if (activeSymbols.contains(w.symbol)) continue;
+      SystemRepository.instance.updateAction('Проверка наблюдения: \$w.symbol');
       await _checkWatched(w);
     }
 
@@ -100,9 +102,11 @@ class SearcherEngine {
       if (activeSymbols.contains(sym) || watchedSymbols.contains(sym)) {
         continue;
       }
+      SystemRepository.instance.updateAction('Анализ сетапа: \$sym');
       await _scanNewCandidate(sym, _d(t['lastPrice']));
       await Future.delayed(const Duration(milliseconds: 200));
     }
+    SystemRepository.instance.updateAction('Цикл завершен. Отдых 30 сек...');
   }
 
   Future<void> _checkWatched(WatchedSetup w) async {

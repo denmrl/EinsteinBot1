@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'core/constants/app_constants.dart';
 import 'core/providers/bot_status_provider.dart';
 import 'core/providers/settings_provider.dart';
+import 'core/providers/system_provider.dart';
 import 'core/providers/trades_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/trades_screen.dart';
@@ -68,6 +69,7 @@ Future<void> main() async {
     Hive.openBox(AppConstants.BOX_BALANCE_HISTORY),
     Hive.openBox(AppConstants.BOX_EVENT_LOG),
     Hive.openBox(AppConstants.BOX_STRATEGY_PROFILES),
+    Hive.openBox(AppConstants.BOX_SYSTEM_METRICS),
   ]);
 
   tz_data.initializeTimeZones();
@@ -98,6 +100,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => TradesProvider()),
         ChangeNotifierProvider(create: (_) => BotStatusProvider()),
+        ChangeNotifierProvider(create: (_) => SystemProvider()),
       ],
       child: const EinsteinApp(),
     ),

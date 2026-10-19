@@ -243,6 +243,7 @@ class AppConstants {
   /// Журнал уведомлений (для экрана «События» — опционально).
   static const String BOX_EVENT_LOG = 'box_event_log';
   static const String BOX_STRATEGY_PROFILES = 'box_strategy_profiles';
+  static const String BOX_SYSTEM_METRICS = 'system_metrics';
 
   // ==========================================================
   // 🔐 КЛЮЧИ БЕЗОПАСНОГО ХРАНИЛИЩА (flutter_secure_storage)

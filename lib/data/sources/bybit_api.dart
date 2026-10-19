@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/rate_limiter.dart';
+import '../repositories/system_repository.dart';
 import '../models/candle.dart';
 
 class BybitApiException implements Exception {
@@ -105,6 +106,7 @@ class BybitApi {
     bool isPrivate = false,
   }) async {
     for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
+      final sw = Stopwatch()..start();
       await RateLimiter.instance.wait();
       try {
         Map<String, String>? headers;
@@ -133,6 +135,8 @@ class BybitApi {
         final map = Map<String, dynamic>.from(data);
         final retCode = map['retCode'];
         if (retCode == 0) {
+          sw.stop();
+          SystemRepository.instance.logApiCall('Bybit', true, sw.elapsedMilliseconds);
           return map;
         }
         if (retCode == 10002 || retCode == 10006 || retCode == 429) {
@@ -140,6 +144,8 @@ class BybitApi {
           await Future.delayed(Duration(milliseconds: _rateLimitPauseMs));
           continue;
         }
+        sw.stop();
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds);
         final msg = map['retMsg'] ?? 'Неизвестная ошибка';
         if (attempt == _maxAttempts) {
           throw BybitApiException(msg.toString(), retCode: retCode);
@@ -147,6 +153,8 @@ class BybitApi {
         _log.w('⚠ Bybit $retCode: $msg. Попытка $attempt/$_maxAttempts');
         await Future.delayed(const Duration(seconds: 2));
       } on DioException catch (e) {
+        sw.stop();
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds);
         final errStr = e.message?.toLowerCase() ?? '';
         final isRate = errStr.contains('429') || errStr.contains('too many requests') || errStr.contains('rate limit');
         final isNetwork = errStr.contains('timeout') || errStr.contains('connection') || errStr.contains('socket') || errStr.contains('network');
