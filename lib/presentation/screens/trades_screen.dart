@@ -117,7 +117,7 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
                 Expanded(
                   child: Text(
                     sys.currentAction,
-                    style: const TextStyle(color: AppColors.accentGreen, fontSize: 12, fontFamily: 'monospace'),
+                    style: const TextStyle(color: AppColors.accentGreen, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
                 ),
