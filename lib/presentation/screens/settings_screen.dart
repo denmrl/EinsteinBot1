@@ -1,8 +1,3 @@
-// ==========================================================
-//  ЭЙНШТЕЙН — Экран настроек (совместимо с Flutter 3.24)
-//  Файл: lib/presentation/screens/settings_screen.dart
-// ==========================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/trades_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/repositories/settings_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,16 +16,29 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // Контроллеры для текстовых полей
+  late final _profileNameCtrl = TextEditingController();
   late final _minTurnoverCtrl = TextEditingController();
   late final _maxTurnoverCtrl = TextEditingController();
   late final _minOiCtrl = TextEditingController();
   late final _capMultCtrl = TextEditingController();
+  late final _minEstCapCtrl = TextEditingController();
+  late final _maxEstCapCtrl = TextEditingController();
+  late final _minRealCapCtrl = TextEditingController();
+  late final _maxRealCapCtrl = TextEditingController();
   late final _flagImpulseCtrl = TextEditingController();
   late final _vrevWickCtrl = TextEditingController();
   late final _vrevVolCtrl = TextEditingController();
 
+  // Стейт для ползунков и тумблеров
   double _leverage = 3;
   double _riskPct = 5.0;
+  double _tp1 = 1.15;
+  double _tp2 = 1.35;
+  double _tp3 = 1.75;
+  double _trailing = 0.15;
+  bool _skipUnlocks = true;
+
   bool _dirty = false;
   bool _saving = false;
 
@@ -41,10 +50,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _profileNameCtrl.dispose();
     _minTurnoverCtrl.dispose();
     _maxTurnoverCtrl.dispose();
     _minOiCtrl.dispose();
     _capMultCtrl.dispose();
+    _minEstCapCtrl.dispose();
+    _maxEstCapCtrl.dispose();
+    _minRealCapCtrl.dispose();
+    _maxRealCapCtrl.dispose();
     _flagImpulseCtrl.dispose();
     _vrevWickCtrl.dispose();
     _vrevVolCtrl.dispose();
@@ -57,12 +71,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _maxTurnoverCtrl.text = s.maxTurnover24h.toStringAsFixed(0);
     _minOiCtrl.text = s.minOpenInterest.toStringAsFixed(0);
     _capMultCtrl.text = s.capMultiplier.toString();
+    _minEstCapCtrl.text = s.minEstimatedCap.toStringAsFixed(0);
+    _maxEstCapCtrl.text = s.maxEstimatedCap.toStringAsFixed(0);
+    _minRealCapCtrl.text = s.minRealMarketCap.toStringAsFixed(0);
+    _maxRealCapCtrl.text = s.maxRealMarketCap.toStringAsFixed(0);
     _flagImpulseCtrl.text = s.flagMinImpulse.toString();
     _vrevWickCtrl.text = s.vrevWickBodyRatio.toString();
     _vrevVolCtrl.text = s.vrevVolumeSpike.toString();
+    
     setState(() {
       _leverage = s.leverage.toDouble();
       _riskPct = s.riskPerTradePct;
+      _tp1 = s.tp1Multiplier;
+      _tp2 = s.tp2Multiplier;
+      _tp3 = s.tp3Multiplier;
+      _trailing = s.trailingPercent;
+      _skipUnlocks = s.skipUpcomingUnlocks;
       _dirty = false;
     });
   }
@@ -76,13 +100,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         maxTurnover24h: _parse(_maxTurnoverCtrl.text, current.maxTurnover24h),
         minOpenInterest: _parse(_minOiCtrl.text, current.minOpenInterest),
         capMultiplier: _parse(_capMultCtrl.text, current.capMultiplier),
+        minEstimatedCap: _parse(_minEstCapCtrl.text, current.minEstimatedCap),
+        maxEstimatedCap: _parse(_maxEstCapCtrl.text, current.maxEstimatedCap),
+        minRealMarketCap: _parse(_minRealCapCtrl.text, current.minRealMarketCap),
+        maxRealMarketCap: _parse(_maxRealCapCtrl.text, current.maxRealMarketCap),
+        skipUpcomingUnlocks: _skipUnlocks,
         flagMinImpulse: _parse(_flagImpulseCtrl.text, current.flagMinImpulse),
-        vrevWickBodyRatio:
-            _parse(_vrevWickCtrl.text, current.vrevWickBodyRatio),
-        vrevVolumeSpike:
-            _parse(_vrevVolCtrl.text, current.vrevVolumeSpike),
+        vrevWickBodyRatio: _parse(_vrevWickCtrl.text, current.vrevWickBodyRatio),
+        vrevVolumeSpike: _parse(_vrevVolCtrl.text, current.vrevVolumeSpike),
         leverage: _leverage.round(),
         riskPerTradePct: _riskPct,
+        tp1Multiplier: _tp1,
+        tp2Multiplier: _tp2,
+        tp3Multiplier: _tp3,
+        trailingPercent: _trailing,
       );
       await context.read<SettingsProvider>().updateSettings(updated);
       _snack('Настройки сохранены ✅');
@@ -99,12 +130,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return v ?? fallback;
   }
 
+  Future<void> _saveProfile() async {
+    final name = _profileNameCtrl.text.trim();
+    if (name.isEmpty) {
+      _snack('Введите название профиля', isError: true);
+      return;
+    }
+    await _save(); // Сначала сохраняем текущие настройки
+    if (!mounted) return;
+    await context.read<SettingsProvider>().saveCurrentAsProfile(name);
+    _profileNameCtrl.clear();
+    _snack('Профиль "$name" сохранен ✅');
+  }
+
   Future<void> _resetBalance() async {
-    final ok = await _confirm(
-      title: 'Сбросить демо-баланс?',
-      message: 'Виртуальный баланс вернётся к '
-          '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)} USDT.',
-    );
+    final ok = await _confirm('Сбросить демо-баланс?', 'Виртуальный баланс вернётся к 1000 USDT.');
     if (!ok) return;
     await context.read<SettingsProvider>().resetPaperAccount();
     if (!mounted) return;
@@ -112,36 +152,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _clearHistory() async {
-    final ok = await _confirm(
-      title: 'Очистить историю?',
-      message: 'Все закрытые сделки будут удалены.',
-    );
+    final ok = await _confirm('Очистить историю?', 'Все закрытые сделки будут удалены.');
     if (!ok) return;
     await context.read<TradesProvider>().clearHistory();
     if (!mounted) return;
     _snack('История очищена ✅');
   }
 
-  Future<bool> _confirm({
-    required String title,
-    required String message,
-  }) async {
+  Future<bool> _confirm(String title, String message) async {
     final res = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.darkSurface,
         title: Text(title, style: const TextStyle(color: AppColors.accentRed)),
-        content: Text(message,
-            style: const TextStyle(color: AppColors.darkTextPrimary)),
+        content: Text(message, style: const TextStyle(color: AppColors.darkTextPrimary)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentRed,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentRed),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Подтвердить'),
           ),
@@ -154,8 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      backgroundColor:
-          isError ? AppColors.accentRed : AppColors.accentGreen,
+      backgroundColor: isError ? AppColors.accentRed : AppColors.accentGreen,
       content: Text(msg),
     ));
   }
@@ -172,172 +199,192 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: (_dirty && !_saving) ? _save : null,
             child: _saving
-                ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    'Сохранить',
-                    style: TextStyle(
-                      color: _dirty
-                          ? AppColors.accentGreen
-                          : AppColors.darkTextSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text('Сохранить', style: TextStyle(
+                    color: _dirty ? AppColors.accentGreen : AppColors.darkTextSecondary,
+                    fontWeight: FontWeight.w600,
+                  )),
           ),
         ],
       ),
       body: settings.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.accentGreen,
-              ),
-            )
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accentGreen))
           : ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: [
+                // ==========================================================
+                // 📁 ПРОФИЛИ СТРАТЕГИЙ
+                // ==========================================================
                 _SectionCard(
-                  icon: Icons.water_drop_outlined,
-                  title: 'Фильтры ликвидности',
-                  subtitle: 'Оборот, OI и оценочная капа',
+                  icon: Icons.folder_special_outlined,
+                  title: 'Стратегии',
+                  subtitle: 'Сохранение и переключение профилей',
                   children: [
-                    _NumberField(
-                      label: 'Мин. оборот 24ч, USDT',
-                      hint: 'например 300000',
-                      controller: _minTurnoverCtrl,
-                      onChanged: () => setState(() => _dirty = true),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _profileNameCtrl,
+                            style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14),
+                            decoration: const InputDecoration(
+                              hintText: 'Название (напр. Агрессивная)',
+                              hintStyle: TextStyle(color: AppColors.darkTextSecondary, fontSize: 13),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _saveProfile,
+                          icon: const Icon(Icons.save, color: AppColors.accentBlue),
+                          tooltip: 'Сохранить профиль',
+                        ),
+                      ],
                     ),
-                    _NumberField(
-                      label: 'Макс. оборот 24ч, USDT',
-                      hint: 'например 40000000',
-                      controller: _maxTurnoverCtrl,
-                      onChanged: () => setState(() => _dirty = true),
-                    ),
-                    _NumberField(
-                      label: 'Мин. Open Interest, USDT',
-                      hint: 'например 100000',
-                      controller: _minOiCtrl,
-                      onChanged: () => setState(() => _dirty = true),
-                    ),
-                    _NumberField(
-                      label: 'Коэффициент капы',
-                      hint: 'например 3.5',
-                      controller: _capMultCtrl,
-                      onChanged: () => setState(() => _dirty = true),
+                    const SizedBox(height: 12),
+                    if (settings.profileNames.isEmpty)
+                      const Text('Нет сохраненных профилей', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 12))
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: settings.profileNames.map((name) {
+                          return InputChip(
+                            label: Text(name, style: const TextStyle(fontSize: 12)),
+                            onPressed: () async {
+                              await settings.applyProfile(name);
+                              _fillFromSettings();
+                              _snack('Профиль "$name" активирован ⚡');
+                            },
+                            onDeleted: () async {
+                              await settings.deleteProfile(name);
+                              _snack('Профиль удален');
+                            },
+                            deleteIconColor: AppColors.accentRed,
+                            backgroundColor: AppColors.darkSurfaceElevated,
+                            side: const BorderSide(color: AppColors.darkBorder),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                ),
+
+                // ==========================================================
+                // 💧 ФИЛЬТРЫ
+                // ==========================================================
+                _SectionCard(
+                  icon: Icons.filter_alt_outlined,
+                  title: 'Фильтры (Bybit)',
+                  subtitle: 'Оборот, OI и капа',
+                  children: [
+                    _NumberField(label: 'Мин. оборот 24ч', controller: _minTurnoverCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Макс. оборот 24ч', controller: _maxTurnoverCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Мин. OI', controller: _minOiCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Коэфф. капы (×оборот)', controller: _capMultCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Мин. оценочная капа', controller: _minEstCapCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Макс. оценочная капа', controller: _maxEstCapCtrl, onChanged: () => setState(() => _dirty = true)),
+                  ],
+                ),
+
+                // ==========================================================
+                // 🌐 ВНЕШНИЕ ДАННЫЕ
+                // ==========================================================
+                _SectionCard(
+                  icon: Icons.public,
+                  title: 'Внешние данные (CoinGecko / Unlocks)',
+                  subtitle: 'Точная капитализация и разблокировки',
+                  children: [
+                    _NumberField(label: 'Мин. реальная капа (USD)', controller: _minRealCapCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'Макс. реальная капа (USD)', controller: _maxRealCapCtrl, onChanged: () => setState(() => _dirty = true)),
+                    SwitchListTile(
+                      title: const Text('Пропускать монеты с разблокировкой', style: TextStyle(color: AppColors.darkTextPrimary, fontSize: 14)),
+                      value: _skipUnlocks,
+                      activeColor: AppColors.accentGreen,
+                      onChanged: (v) => setState(() { _skipUnlocks = v; _dirty = true; }),
                     ),
                   ],
                 ),
+
+                // ==========================================================
+                // 📐 ПАТТЕРНЫ
+                // ==========================================================
                 _SectionCard(
                   icon: Icons.auto_graph,
                   title: 'Параметры паттернов',
-                  subtitle: 'Чувствительность распознавания',
                   children: [
-                    _NumberField(
-                      label: 'Импульс Бычьего Флага',
-                      hint: '0.08 = 8% роста',
-                      controller: _flagImpulseCtrl,
-                      onChanged: () => setState(() => _dirty = true),
-                    ),
-                    _NumberField(
-                      label: 'V-Разворот: тень / тело',
-                      hint: '1.6',
-                      controller: _vrevWickCtrl,
-                      onChanged: () => setState(() => _dirty = true),
-                    ),
-                    _NumberField(
-                      label: 'V-Разворот: спайк объёма',
-                      hint: '1.8',
-                      controller: _vrevVolCtrl,
-                      onChanged: () => setState(() => _dirty = true),
-                    ),
+                    _NumberField(label: 'Импульс Флага', controller: _flagImpulseCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'V-Разворот: тень / тело', controller: _vrevWickCtrl, onChanged: () => setState(() => _dirty = true)),
+                    _NumberField(label: 'V-Разворот: спайк объема', controller: _vrevVolCtrl, onChanged: () => setState(() => _dirty = true)),
                   ],
                 ),
+
+                // ==========================================================
+                // 🛡 РИСК-МЕНЕДЖМЕНТ И ФИКСАЦИИ
+                // ==========================================================
                 _SectionCard(
                   icon: Icons.shield_outlined,
-                  title: 'Риск-менеджмент',
-                  subtitle: 'Плечо и риск на сделку',
+                  title: 'Риск и Фиксации',
+                  subtitle: 'Плечо, TP и Трейлинг',
                   children: [
                     _SliderField(
-                      label: 'Кредитное плечо',
-                      valueLabel: '${_leverage.round()}x',
-                      value: _leverage,
-                      min: 1,
-                      max: 20,
-                      divisions: 19,
-                      onChanged: (v) => setState(() {
-                        _leverage = v;
-                        _dirty = true;
-                      }),
+                      label: 'Кредитное плечо', valueLabel: '${_leverage.round()}x',
+                      value: _leverage, min: 1, max: 20, divisions: 19,
+                      onChanged: (v) => setState(() { _leverage = v; _dirty = true; }),
                     ),
                     _SliderField(
-                      label: 'Риск на сделку',
-                      valueLabel: '${_riskPct.toStringAsFixed(1)}%',
-                      value: _riskPct,
-                      min: 1,
-                      max: 20,
-                      divisions: 38,
-                      onChanged: (v) => setState(() {
-                        _riskPct = v;
-                        _dirty = true;
-                      }),
+                      label: 'Риск на сделку', valueLabel: '${_riskPct.toStringAsFixed(1)}%',
+                      value: _riskPct, min: 1, max: 20, divisions: 38,
+                      onChanged: (v) => setState(() { _riskPct = v; _dirty = true; }),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Максимальный убыток по одной сделке ≈ '
-                        '${(1000 * _riskPct / 100).toStringAsFixed(1)} USDT',
-                        style: const TextStyle(
-                          color: AppColors.darkTextSecondary,
-                          fontSize: 11,
-                          height: 1.35,
-                        ),
-                      ),
+                    const Divider(color: AppColors.darkBorder, height: 24),
+                    _SliderField(
+                      label: 'TP1 (Фиксация 30%)', valueLabel: '${(_tp1*100 - 100).toStringAsFixed(0)}%',
+                      value: _tp1, min: 1.05, max: 1.5, divisions: 45,
+                      onChanged: (v) => setState(() { _tp1 = v; _dirty = true; }),
+                    ),
+                    _SliderField(
+                      label: 'TP2 (Фиксация 30%)', valueLabel: '${(_tp2*100 - 100).toStringAsFixed(0)}%',
+                      value: _tp2, min: 1.2, max: 2.0, divisions: 80,
+                      onChanged: (v) => setState(() { _tp2 = v; _dirty = true; }),
+                    ),
+                    _SliderField(
+                      label: 'TP3 (Вкл. трейлинг)', valueLabel: '${(_tp3*100 - 100).toStringAsFixed(0)}%',
+                      value: _tp3, min: 1.5, max: 3.0, divisions: 75,
+                      onChanged: (v) => setState(() { _tp3 = v; _dirty = true; }),
+                    ),
+                    _SliderField(
+                      label: 'Трейлинг от максимума', valueLabel: '${(_trailing*100).toStringAsFixed(0)}%',
+                      value: _trailing, min: 0.05, max: 0.3, divisions: 25,
+                      onChanged: (v) => setState(() { _trailing = v; _dirty = true; }),
                     ),
                   ],
                 ),
+
+                // ==========================================================
+                // ⚠️ ОПАСНАЯ ЗОНА
+                // ==========================================================
                 Container(
                   margin: const EdgeInsets.fromLTRB(12, 20, 12, 8),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.accentRed.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.accentRed.withOpacity(0.3),
-                    ),
+                    border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded,
-                              color: AppColors.accentRed, size: 18),
+                          Icon(Icons.warning_amber_rounded, color: AppColors.accentRed, size: 18),
                           SizedBox(width: 8),
-                          Text(
-                            'ОПАСНАЯ ЗОНА',
-                            style: TextStyle(
-                              color: AppColors.accentRed,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
+                          Text('ОПАСНАЯ ЗОНА', style: TextStyle(color: AppColors.accentRed, fontSize: 12, fontWeight: FontWeight.w700)),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _DangerButton(
-                        icon: Icons.restart_alt,
-                        label: 'Сбросить демо-баланс к '
-                            '${AppConstants.PAPER_START_BALANCE_USDT.toStringAsFixed(0)}\$',
-                        onTap: _resetBalance,
-                      ),
+                      _DangerButton(icon: Icons.restart_alt, label: 'Сбросить демо-баланс к 1000\$', onTap: _resetBalance),
                       const SizedBox(height: 8),
-                      _DangerButton(
-                        icon: Icons.delete_sweep_outlined,
-                        label: 'Очистить историю сделок',
-                        onTap: _clearHistory,
-                      ),
+                      _DangerButton(icon: Icons.delete_sweep_outlined, label: 'Очистить историю сделок', onTap: _clearHistory),
                     ],
                   ),
                 ),
@@ -348,17 +395,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class _SectionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final List<Widget> children;
-
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.children,
-  });
+  final IconData icon; final String title; final String subtitle; final List<Widget> children;
+  const _SectionCard({required this.icon, required this.title, this.subtitle = '', required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -376,12 +414,8 @@ class _SectionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.accentBlue.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                width: 32, height: 32,
+                decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, size: 18, color: AppColors.accentBlue),
               ),
               const SizedBox(width: 10),
@@ -389,21 +423,8 @@ class _SectionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
+                    Text(title, style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+                    if (subtitle.isNotEmpty) Text(subtitle, style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 11)),
                   ],
                 ),
               ),
@@ -418,17 +439,8 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _NumberField extends StatelessWidget {
-  final String label;
-  final String hint;
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-
-  const _NumberField({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.onChanged,
-  });
+  final String label; final TextEditingController controller; final VoidCallback onChanged;
+  const _NumberField({required this.label, required this.controller, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -436,47 +448,20 @@ class _NumberField extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
-        keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-        ],
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
         onChanged: (_) => onChanged(),
-        style: const TextStyle(
-          color: AppColors.darkTextPrimary,
-          fontSize: 14,
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: AppColors.darkTextSecondary.withOpacity(0.5),
-            fontSize: 12,
-          ),
-        ),
+        style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14),
+        decoration: InputDecoration(labelText: label),
       ),
     );
   }
 }
 
 class _SliderField extends StatelessWidget {
-  final String label;
-  final String valueLabel;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final ValueChanged<double> onChanged;
-
-  const _SliderField({
-    required this.label,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.onChanged,
-  });
+  final String label; final String valueLabel; final double value;
+  final double min; final double max; final int divisions; final ValueChanged<double> onChanged;
+  const _SliderField({required this.label, required this.valueLabel, required this.value, required this.min, required this.max, required this.divisions, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -487,32 +472,13 @@ class _SliderField extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              Text(
-                valueLabel,
-                style: const TextStyle(
-                  color: AppColors.accentGreen,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Expanded(child: Text(label, style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 13))),
+              Text(valueLabel, style: const TextStyle(color: AppColors.accentGreen, fontSize: 14, fontWeight: FontWeight.w700)),
             ],
           ),
           Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: divisions,
-            activeColor: AppColors.accentGreen,
-            inactiveColor: AppColors.darkBorder,
+            value: value, min: min, max: max, divisions: divisions,
+            activeColor: AppColors.accentGreen, inactiveColor: AppColors.darkBorder,
             onChanged: onChanged,
           ),
         ],
@@ -522,15 +488,8 @@ class _SliderField extends StatelessWidget {
 }
 
 class _DangerButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _DangerButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  final IconData icon; final String label; final VoidCallback onTap;
+  const _DangerButton({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -539,21 +498,11 @@ class _DangerButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 18, color: AppColors.accentRed),
-        label: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            style: const TextStyle(color: AppColors.accentRed),
-          ),
-        ),
+        label: Align(alignment: Alignment.centerLeft, child: Text(label, style: const TextStyle(color: AppColors.accentRed))),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          side: BorderSide(
-            color: AppColors.accentRed.withOpacity(0.4),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          side: BorderSide(color: AppColors.accentRed.withOpacity(0.4)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
