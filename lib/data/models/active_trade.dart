@@ -23,6 +23,10 @@ class ActiveTrade {
   final double tp2;
   /// Уровень TP3 (+75% от входа, после него — трейлинг).
   final double tp3;
+  final double tp4;
+  final double tp5;
+  final int tpCount;
+  final bool enableTrailing;
   // ---------- Состояние сопровождения ----------
   /// Оставшийся «вес» позиции (1.0 = 100%).
   /// После TP1 = 0.70, после TP2 = 0.40.
@@ -55,6 +59,10 @@ class ActiveTrade {
     required this.tp1,
     required this.tp2,
     required this.tp3,
+    this.tp4 = 0.0,
+    this.tp5 = 0.0,
+    this.tpCount = 3,
+    this.enableTrailing = true,
     this.remainingWeight = 1.0,
     this.realizedPnlPct = 0.0,
     this.tp1Done = false,
@@ -78,6 +86,10 @@ class ActiveTrade {
       'tp1': tp1,
       'tp2': tp2,
       'tp3': tp3,
+      'tp4': tp4,
+      'tp5': tp5,
+      'tpCount': tpCount,
+      'enableTrailing': enableTrailing,
       'remainingWeight': remainingWeight,
       'realizedPnlPct': realizedPnlPct,
       'tp1Done': tp1Done,
@@ -99,6 +111,10 @@ class ActiveTrade {
       tp1: _toDouble(map['tp1']),
       tp2: _toDouble(map['tp2']),
       tp3: _toDouble(map['tp3']),
+      tp4: _toDouble(map['tp4']),
+      tp5: _toDouble(map['tp5']),
+      tpCount: map['tpCount'] ?? 3,
+      enableTrailing: map['enableTrailing'] ?? true,
       remainingWeight: _toDouble(map['remainingWeight'], fallback: 1.0),
       realizedPnlPct: _toDouble(map['realizedPnlPct']),
       tp1Done: _toBool(map['tp1Done']),
@@ -132,6 +148,10 @@ class ActiveTrade {
       tp1: tp1,
       tp2: tp2,
       tp3: tp3,
+      tp4: tp4,
+      tp5: tp5,
+      tpCount: tpCount,
+      enableTrailing: enableTrailing,
       remainingWeight: remainingWeight ?? this.remainingWeight,
       realizedPnlPct: realizedPnlPct ?? this.realizedPnlPct,
       tp1Done: tp1Done ?? this.tp1Done,

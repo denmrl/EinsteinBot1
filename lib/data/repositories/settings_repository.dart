@@ -28,6 +28,10 @@ class BotSettings {
   final double tp2Multiplier;
   final double tp3Multiplier;
   final double trailingPercent;
+  final int tpCount;
+  final bool enableTrailing;
+  final double tp4Multiplier;
+  final double tp5Multiplier;
   final int leverage;
   final double riskPerTradePct;
 
@@ -50,6 +54,10 @@ class BotSettings {
     this.tp1Multiplier = AppConstants.TP1_MULTIPLIER,
     this.tp2Multiplier = AppConstants.TP2_MULTIPLIER,
     this.tp3Multiplier = AppConstants.TP3_MULTIPLIER,
+    this.tp4Multiplier = 2.5,
+    this.tp5Multiplier = 4.0,
+    this.tpCount = 3,
+    this.enableTrailing = true,
     this.trailingPercent = AppConstants.TRAILING_PERCENT,
     this.leverage = 3,
     this.riskPerTradePct = 5.0,
@@ -84,6 +92,10 @@ class BotSettings {
       tp2Multiplier: tp2Multiplier ?? this.tp2Multiplier,
       tp3Multiplier: tp3Multiplier ?? this.tp3Multiplier,
       trailingPercent: trailingPercent ?? this.trailingPercent,
+      tp4Multiplier: tp4Multiplier ?? this.tp4Multiplier,
+      tp5Multiplier: tp5Multiplier ?? this.tp5Multiplier,
+      tpCount: tpCount ?? this.tpCount,
+      enableTrailing: enableTrailing ?? this.enableTrailing,
       leverage: leverage ?? this.leverage,
       riskPerTradePct: riskPerTradePct ?? this.riskPerTradePct,
     );
@@ -118,6 +130,10 @@ class SettingsRepository {
       tp2Multiplier: prefs.getDouble('tp2') ?? AppConstants.TP2_MULTIPLIER,
       tp3Multiplier: prefs.getDouble('tp3') ?? AppConstants.TP3_MULTIPLIER,
       trailingPercent: prefs.getDouble('trail') ?? AppConstants.TRAILING_PERCENT,
+      tp4Multiplier: prefs.getDouble('tp4') ?? 2.5,
+      tp5Multiplier: prefs.getDouble('tp5') ?? 4.0,
+      tpCount: prefs.getInt('tp_count') ?? 3,
+      enableTrailing: prefs.getBool('trail_en') ?? true,
       leverage: prefs.getInt('lev') ?? 3,
       riskPerTradePct: prefs.getDouble('risk') ?? 5.0,
     );
@@ -135,7 +151,11 @@ class SettingsRepository {
       prefs.setDouble('flag_imp', s.flagMinImpulse), prefs.setDouble('vrev_wick', s.vrevWickBodyRatio),
       prefs.setDouble('vrev_vol', s.vrevVolumeSpike), prefs.setDouble('tp1', s.tp1Multiplier),
       prefs.setDouble('tp2', s.tp2Multiplier), prefs.setDouble('tp3', s.tp3Multiplier),
-      prefs.setDouble('trail', s.trailingPercent), prefs.setInt('lev', s.leverage),
+      prefs.setDouble('trail', s.trailingPercent),
+      prefs.setDouble('tp4', s.tp4Multiplier),
+      prefs.setDouble('tp5', s.tp5Multiplier),
+      prefs.setInt('tp_count', s.tpCount),
+      prefs.setBool('trail_en', s.enableTrailing), prefs.setInt('lev', s.leverage),
       prefs.setDouble('risk', s.riskPerTradePct),
     ]);
   }
@@ -161,7 +181,11 @@ class SettingsRepository {
       flagMinImpulse: (map['flagMinImpulse'] as num).toDouble(), vrevWickBodyRatio: (map['vrevWickBodyRatio'] as num).toDouble(),
       vrevVolumeSpike: (map['vrevVolumeSpike'] as num).toDouble(), tp1Multiplier: (map['tp1Multiplier'] as num).toDouble(),
       tp2Multiplier: (map['tp2Multiplier'] as num).toDouble(), tp3Multiplier: (map['tp3Multiplier'] as num).toDouble(),
-      trailingPercent: (map['trailingPercent'] as num).toDouble(), leverage: (map['leverage'] as num).toInt(),
+      trailingPercent: (map['trailingPercent'] as num).toDouble(),
+      tp4Multiplier: (map['tp4Multiplier'] as num?)?.toDouble() ?? 2.5,
+      tp5Multiplier: (map['tp5Multiplier'] as num?)?.toDouble() ?? 4.0,
+      tpCount: (map['tpCount'] as num?)?.toInt() ?? 3,
+      enableTrailing: map['enableTrailing'] as bool? ?? true, leverage: (map['leverage'] as num).toInt(),
       riskPerTradePct: (map['riskPerTradePct'] as num).toDouble(),
     );
   }
