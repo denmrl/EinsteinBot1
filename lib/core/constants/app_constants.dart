@@ -192,7 +192,7 @@ class AppConstants {
   // ==========================================================
 
   /// Базовый REST-URL Bybit V5 (mainnet).
-  static const String BYBIT_BASE_URL = 'https://api.bytick.com';
+  static const String BYBIT_BASE_URL = 'https://api.bybit.com';
 
   /// WebSocket-URL (понадобится позже).
   static const String BYBIT_WS_URL = 'wss://stream.bybit.com/v5/public/linear';
