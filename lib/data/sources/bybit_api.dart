@@ -110,7 +110,7 @@ class BybitApi {
       await RateLimiter.instance.wait();
       try {
         Map<String, String>? headers;
-        if (isPrivate || hasCredentials) {
+        if (isPrivate) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           if (method == 'GET') {
             headers = _signHeaders(
@@ -145,8 +145,8 @@ class BybitApi {
           continue;
         }
         sw.stop();
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds);
         final msg = map['retMsg'] ?? 'Неизвестная ошибка';
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: '\$retCode: \$msg');
         if (attempt == _maxAttempts) {
           throw BybitApiException(msg.toString(), retCode: retCode);
         }
@@ -154,7 +154,7 @@ class BybitApi {
         await Future.delayed(const Duration(seconds: 2));
       } on DioException catch (e) {
         sw.stop();
-        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds);
+        SystemRepository.instance.logApiCall('Bybit', false, sw.elapsedMilliseconds, errorMsg: '\${e.message}');
         final errStr = e.message?.toLowerCase() ?? '';
         final isRate = errStr.contains('429') || errStr.contains('too many requests') || errStr.contains('rate limit');
         final isNetwork = errStr.contains('timeout') || errStr.contains('connection') || errStr.contains('socket') || errStr.contains('network');

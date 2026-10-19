@@ -5,6 +5,7 @@ class ApiMetric {
   final int successCount;
   final int errorCount;
   final int lastLatencyMs;
+  final String? lastError;
   final DateTime lastUpdate;
 
   const ApiMetric({
@@ -12,12 +13,13 @@ class ApiMetric {
     this.successCount = 0,
     this.errorCount = 0,
     this.lastLatencyMs = 0,
+    this.lastError,
     required this.lastUpdate,
   });
 
   Map<String, dynamic> toMap() => {
     'name': name, 'successCount': successCount, 'errorCount': errorCount,
-    'lastLatencyMs': lastLatencyMs, 'lastUpdate': lastUpdate.millisecondsSinceEpoch,
+    'lastLatencyMs': lastLatencyMs, 'lastUpdate': lastUpdate.millisecondsSinceEpoch, 'lastError': lastError,
   };
 
   factory ApiMetric.fromMap(Map<dynamic, dynamic> map) => ApiMetric(
@@ -25,6 +27,7 @@ class ApiMetric {
     successCount: map['successCount'] ?? 0,
     errorCount: map['errorCount'] ?? 0,
     lastLatencyMs: map['lastLatencyMs'] ?? 0,
+    lastError: map['lastError'],
     lastUpdate: DateTime.fromMillisecondsSinceEpoch(map['lastUpdate'] ?? 0),
   );
 }

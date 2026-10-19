@@ -18,7 +18,7 @@ class SystemRepository {
     await _box.put('history', history);
   }
 
-  Future<void> logApiCall(String apiName, bool isSuccess, int latencyMs) async {
+  Future<void> logApiCall(String apiName, bool isSuccess, int latencyMs, {String? errorMsg}) async {
     final key = 'api_$apiName';
     final raw = _box.get(key);
     ApiMetric metric = raw != null ? ApiMetric.fromMap(raw) : ApiMetric(name: apiName, lastUpdate: DateTime.now());
@@ -28,6 +28,7 @@ class SystemRepository {
       successCount: metric.successCount + (isSuccess ? 1 : 0),
       errorCount: metric.errorCount + (isSuccess ? 0 : 1),
       lastLatencyMs: latencyMs,
+      lastError: errorMsg,
       lastUpdate: DateTime.now(),
     );
     
