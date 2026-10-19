@@ -10,28 +10,32 @@ class SystemProvider extends ChangeNotifier {
   String _liveAction = 'Ожидание...';
 
   SystemProvider() {
-    // 1. Слушаем прямые сообщения из фонового изолята
+    // Слушаем прямые сообщения из фонового изолята
     FlutterForegroundTask.addTaskDataCallback((data) {
+      debugPrint('📩 [SystemProvider] Получено из фона: $data');
       if (data is Map && data['action'] != null) {
         _liveAction = data['action'].toString();
         notifyListeners();
       }
     });
 
-    // 2. Каждые 2 секунды обновляем UI (для графиков и логов)
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _pollHive());
+    // На всякий случай опрашиваем Hive (вдруг сообщение из фона потерялось)
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _pollHive());
   }
 
   void _pollHive() {
     try {
-      final box = Hive.box('system_metrics');
-      final action = box.get('current_action', defaultValue: 'Ожидание...');
-      
-      if (action != _liveAction) {
-        _liveAction = action;
+      if (Hive.isBoxOpen('system_metrics')) {
+        final box = Hive.box('system_metrics');
+        final action = box.get('current_action', defaultValue: 'Ожидание...');
+        if (action != _liveAction) {
+          _liveAction = action.toString();
+          notifyListeners();
+        }
       }
-      notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('⚠ [SystemProvider] Ошибка чтения Hive: $e');
+    }
   }
 
   String get currentAction => _liveAction;

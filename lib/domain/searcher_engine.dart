@@ -49,6 +49,7 @@ class SearcherEngine {
   Future<void> _tick() async {
     if (_running) return;
     _running = true;
+    _updateAction('Сканирование рынка...');
     try {
       await _runScan();
     } catch (e, st) {
